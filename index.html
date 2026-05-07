@@ -1,0 +1,1652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sketchlog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --bg:        #080808;
+  --bg2:       #0f0f0f;
+  --bg3:       #161616;
+  --bg4:       #1e1e1e;
+  --border:    #222;
+  --border2:   #2e2e2e;
+  --neon:      #00c8ff;
+  --neon-dim:  rgba(0,200,255,0.12);
+  --neon-glow: 0 0 16px rgba(0,200,255,0.45);
+  --neon-glow-sm: 0 0 8px rgba(0,200,255,0.3);
+  --text:      #f0f0f0;
+  --text2:     #888;
+  --text3:     #444;
+  --red:       #ff4444;
+  --green:     #00e676;
+  --amber:     #ffc107;
+  --purple:    #a855f7;
+  --radius:    6px;
+  --radius-lg: 10px;
+  --font-head: 'Syne', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-head);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* SCANLINE OVERLAY */
+body::after {
+  content:'';
+  position:fixed;
+  inset:0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+  pointer-events:none;
+  z-index:9999;
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--neon); border-radius: 2px; }
+
+/* ── HEADER ── */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  background: rgba(8,8,8,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  height: 56px;
+}
+
+.logo {
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  color: var(--text);
+}
+.logo span {
+  color: var(--neon);
+  text-shadow: var(--neon-glow-sm);
+}
+
+nav {
+  display: flex;
+  gap: 2px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px;
+}
+
+nav button {
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  padding: 5px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+
+nav button:hover { color: var(--text); background: var(--bg3); }
+nav button.active {
+  background: var(--neon);
+  color: #000;
+  font-weight: 500;
+  box-shadow: var(--neon-glow-sm);
+}
+
+/* ── MAIN ── */
+main { max-width: 1140px; margin: 0 auto; padding: 2rem; }
+.view { display: none; animation: fadeIn 0.2s ease; }
+.view.active { display: block; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+/* ── PAGE HEADER ── */
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.page-head h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.page-head h1 .accent {
+  color: var(--neon);
+  text-shadow: var(--neon-glow-sm);
+}
+
+.page-head p {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text2);
+  margin-top: 6px;
+  letter-spacing: 0.03em;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  font-weight: 500;
+  padding: 0.55rem 1.1rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s;
+}
+
+.btn-neon {
+  background: var(--neon);
+  color: #000;
+  box-shadow: var(--neon-glow-sm);
+}
+.btn-neon:hover { box-shadow: var(--neon-glow); transform: translateY(-1px); }
+.btn-neon:active { transform: scale(0.97); }
+
+.btn-outline {
+  background: transparent;
+  color: var(--neon);
+  border: 1px solid var(--neon);
+  box-shadow: none;
+}
+.btn-outline:hover { background: var(--neon-dim); box-shadow: var(--neon-glow-sm); }
+
+.btn-ghost {
+  background: var(--bg3);
+  color: var(--text2);
+  border: 1px solid var(--border2);
+}
+.btn-ghost:hover { color: var(--text); border-color: var(--text3); }
+
+/* ── SCHEDULE ── */
+.ai-banner {
+  display: none;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0,200,255,0.07);
+  border: 1px solid rgba(0,200,255,0.25);
+  border-radius: var(--radius);
+  padding: 0.7rem 1.1rem;
+  margin-bottom: 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--neon);
+}
+.ai-banner.visible { display: flex; }
+.ai-banner-dot { width:7px; height:7px; border-radius:50%; background:var(--neon); box-shadow:var(--neon-glow-sm); flex-shrink:0; animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+
+.week-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-bottom: 1.25rem;
+}
+
+.day-pill {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+  position: relative;
+  overflow: hidden;
+}
+
+.day-pill::before {
+  content:'';
+  position:absolute;
+  inset:0;
+  background: linear-gradient(135deg, rgba(0,200,255,0.04) 0%, transparent 60%);
+  opacity:0;
+  transition: opacity 0.15s;
+}
+
+.day-pill:hover:not(.rest)::before { opacity:1; }
+.day-pill:hover:not(.rest) { border-color: var(--neon); box-shadow: 0 0 10px rgba(0,200,255,0.15); }
+
+.day-pill.active {
+  border-color: var(--neon);
+  background: var(--neon-dim);
+  box-shadow: var(--neon-glow-sm);
+}
+
+.day-pill.rest { opacity: 0.3; cursor: default; }
+.dp-label { font-family: var(--font-mono); font-size: 9px; color: var(--text3); letter-spacing:0.06em; }
+.dp-focus { font-size: 10px; font-weight: 700; margin-top: 4px; color: var(--text); }
+.day-pill.active .dp-focus { color: var(--neon); }
+.dp-time { font-family: var(--font-mono); font-size: 9px; color: var(--text3); margin-top: 4px; }
+
+.day-detail {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+
+.detail-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.detail-top h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.focus-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 3px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--neon);
+  color: var(--neon);
+  background: var(--neon-dim);
+}
+
+.sessions { display: flex; flex-direction: column; gap: 0; }
+
+.session {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.session:last-child { border-bottom: none; }
+
+.s-time { font-family: var(--font-mono); font-size: 10px; color: var(--text3); padding-top: 2px; }
+.s-name { font-size: 13px; font-weight: 700; margin-bottom: 3px; letter-spacing: -0.01em; }
+.s-desc { font-size: 12px; color: var(--text2); line-height: 1.6; font-family: var(--font-mono); font-weight: 300; }
+
+.tip-strip {
+  margin-top: 1.25rem;
+  background: rgba(0,200,255,0.06);
+  border-left: 2px solid var(--neon);
+  padding: 0.75rem 1rem;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: rgba(0,200,255,0.8);
+  line-height: 1.7;
+}
+.tip-strip strong { display:block; font-size:9px; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:4px; color:var(--neon); }
+
+/* ── MODALS ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.8);
+  backdrop-filter: blur(4px);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 0 60px rgba(0,0,0,0.8), 0 0 20px rgba(0,200,255,0.08);
+}
+
+.modal h2 {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  margin-bottom: 1.5rem;
+}
+
+.modal h2 .accent { color: var(--neon); }
+
+.form-group { margin-bottom: 1.1rem; }
+.form-group label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 6px;
+}
+
+.form-group select,
+.form-group textarea,
+.form-group input[type="date"],
+.form-group input[type="text"],
+.form-group input[type="time"] {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  transition: border-color 0.15s;
+  -webkit-appearance: none;
+}
+
+.form-group select:focus,
+.form-group textarea:focus,
+.form-group input:focus {
+  outline: none;
+  border-color: var(--neon);
+  box-shadow: 0 0 0 2px rgba(0,200,255,0.12);
+}
+
+.form-group textarea { resize: vertical; min-height: 80px; line-height: 1.6; }
+
+.form-group select option { background: var(--bg3); }
+
+.drop-zone {
+  border: 1px dashed var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+.drop-zone:hover,.drop-zone.drag-over {
+  border-color: var(--neon);
+  background: var(--neon-dim);
+  box-shadow: var(--neon-glow-sm);
+}
+.drop-zone.has-file { border-color: var(--green); background: rgba(0,230,118,0.06); }
+.drop-zone-icon { font-size: 1.75rem; margin-bottom: 8px; }
+.drop-zone p { font-family: var(--font-mono); font-size: 11px; color: var(--text3); }
+.drop-zone.has-file p { color: var(--green); }
+#previewImg, #hof-previewImg { max-width:100%; max-height:160px; border-radius:var(--radius); margin-top:10px; display:none; object-fit:contain; }
+
+.modal-actions { display: flex; gap: 10px; margin-top: 1.5rem; }
+.modal-actions .btn { flex:1; justify-content:center; padding:0.7rem; font-size:12px; }
+
+/* ── LOG ── */
+.entries-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.entry-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all 0.15s;
+  cursor: default;
+}
+.entry-card:hover { border-color: var(--neon); box-shadow: 0 0 16px rgba(0,200,255,0.1); transform: translateY(-2px); }
+
+.entry-img { width:100%; aspect-ratio:4/3; object-fit:cover; display:block; background:var(--bg3); }
+.entry-img-placeholder { width:100%; aspect-ratio:4/3; background:var(--bg3); display:flex; align-items:center; justify-content:center; font-size:2rem; color:var(--text3); }
+
+.entry-body { padding: 0.875rem; }
+.entry-meta { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+.entry-tag { font-family:var(--font-mono); font-size:9px; padding:2px 8px; border-radius:99px; border:1px solid var(--neon); color:var(--neon); background:var(--neon-dim); }
+.entry-date { font-family:var(--font-mono); font-size:9px; color:var(--text3); }
+.entry-focus { font-size:12px; font-weight:700; margin-bottom:3px; letter-spacing:-0.01em; }
+.entry-notes { font-family:var(--font-mono); font-size:11px; color:var(--text2); line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+
+/* ── HALL OF FAME ── */
+.hof-hero {
+  position: relative;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  margin-bottom: 1.75rem;
+  overflow: hidden;
+  text-align: center;
+}
+
+.hof-hero::before {
+  content:'';
+  position:absolute;
+  top:-60px; left:50%; transform:translateX(-50%);
+  width:300px; height:150px;
+  background: radial-gradient(ellipse, rgba(0,200,255,0.15) 0%, transparent 70%);
+  pointer-events:none;
+}
+
+.hof-hero h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+  position: relative;
+}
+.hof-hero p { font-family: var(--font-mono); font-size: 11px; color: var(--text2); position: relative; }
+
+.hof-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.hof-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all 0.2s;
+  position: relative;
+  cursor: pointer;
+}
+
+.hof-card::after {
+  content:'';
+  position:absolute;
+  inset:0;
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 0 0 1px transparent;
+  transition: box-shadow 0.2s;
+}
+
+.hof-card:hover { transform: translateY(-3px); border-color: var(--neon); }
+.hof-card:hover::after { box-shadow: inset 0 0 0 1px rgba(0,200,255,0.2), 0 0 24px rgba(0,200,255,0.15); }
+
+.hof-img-wrap { position: relative; aspect-ratio: 3/2; overflow: hidden; background: var(--bg3); }
+.hof-img { width:100%; height:100%; object-fit:cover; display:block; transition: transform 0.3s; }
+.hof-card:hover .hof-img { transform: scale(1.03); }
+
+.hof-star {
+  position:absolute;
+  top:10px; right:10px;
+  background: rgba(0,0,0,0.7);
+  border: 1px solid rgba(0,200,255,0.4);
+  border-radius: 50%;
+  width: 28px; height: 28px;
+  display: flex; align-items:center; justify-content:center;
+  font-size: 13px;
+}
+
+.hof-body { padding: 1rem; }
+.hof-title { font-size: 13px; font-weight: 700; letter-spacing: -0.01em; margin-bottom: 3px; }
+.hof-meta { font-family: var(--font-mono); font-size: 10px; color: var(--text3); display:flex; gap:12px; }
+.hof-desc { font-family: var(--font-mono); font-size: 11px; color: var(--text2); margin-top: 6px; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+
+/* ── PROGRESS ── */
+.progress-grid {
+  display: grid;
+  grid-template-columns: repeat(5,1fr);
+  gap: 10px;
+  margin-bottom: 1.75rem;
+}
+
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  text-align: center;
+}
+
+.stat-card .stat-val {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--neon);
+  text-shadow: var(--neon-glow-sm);
+  letter-spacing: -0.04em;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.stat-card .stat-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text3);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.chart-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.chart-card h3 {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 1.25rem;
+  color: var(--text2);
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.chart-wrap { position: relative; height: 220px; }
+
+.skill-rows { display: flex; flex-direction: column; gap: 12px; }
+.skill-row { display: grid; grid-template-columns: 130px 1fr 36px; align-items: center; gap: 12px; }
+.skill-name { font-size: 12px; color: var(--text2); font-family: var(--font-mono); }
+.skill-bar-bg { background: var(--bg3); border-radius: 99px; height: 5px; overflow: hidden; }
+.skill-bar-fill { height: 100%; border-radius:99px; background: var(--neon); box-shadow: var(--neon-glow-sm); transition: width 1s cubic-bezier(0.4,0,0.2,1); }
+.skill-score { font-family: var(--font-mono); font-size: 10px; color: var(--text3); text-align:right; }
+
+/* ── REMINDERS ── */
+.reminders-layout { display: grid; grid-template-columns: 1fr 360px; gap: 1.5rem; }
+
+.reminder-list { display: flex; flex-direction: column; gap: 10px; }
+
+.reminder-item {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.875rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: border-color 0.15s;
+}
+
+.reminder-item:hover { border-color: var(--border2); }
+
+.reminder-item.active { border-color: rgba(0,200,255,0.3); background: rgba(0,200,255,0.04); }
+
+.r-indicator {
+  width: 8px; height: 8px; border-radius:50%; flex-shrink:0;
+}
+.r-indicator.on { background: var(--neon); box-shadow: var(--neon-glow-sm); animation: pulse 2s infinite; }
+.r-indicator.off { background: var(--text3); }
+
+.r-body { flex:1; }
+.r-label { font-size: 13px; font-weight: 600; letter-spacing: -0.01em; }
+.r-sub { font-family: var(--font-mono); font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+.r-toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.r-toggle input { opacity:0; width:0; height:0; }
+.r-slider {
+  position:absolute;
+  cursor:pointer;
+  inset:0;
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  border-radius: 99px;
+  transition: all 0.2s;
+}
+.r-slider::before {
+  content:'';
+  position:absolute;
+  width:14px; height:14px;
+  left:2px; top:2px;
+  background: var(--text3);
+  border-radius:50%;
+  transition: all 0.2s;
+}
+.r-toggle input:checked + .r-slider { background: var(--neon-dim); border-color: var(--neon); }
+.r-toggle input:checked + .r-slider::before { transform:translateX(16px); background:var(--neon); box-shadow:var(--neon-glow-sm); }
+
+.reminder-add-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  height: fit-content;
+}
+
+.reminder-add-card h3 {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 1.1rem;
+}
+
+/* ── EMPTY STATES ── */
+.empty {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text3);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-lg);
+}
+.empty-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+.empty h3 { font-size: 1rem; font-weight: 700; color: var(--text2); margin-bottom: 6px; }
+.empty p { font-family: var(--font-mono); font-size: 11px; color: var(--text3); line-height:1.7; }
+
+/* ── LIGHTBOX ── */
+.lightbox {
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.95);
+  z-index:500;
+  align-items:center;
+  justify-content:center;
+  padding:2rem;
+  cursor:zoom-out;
+}
+.lightbox.open { display:flex; }
+.lightbox img { max-width:90vw; max-height:90vh; object-fit:contain; border-radius:var(--radius); box-shadow:0 0 60px rgba(0,200,255,0.2); }
+
+/* ── AI ANALYSIS MODAL ── */
+.analysis-modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  width: 100%;
+  max-width: 680px;
+  max-height: 88vh;
+  overflow-y: auto;
+  box-shadow: 0 0 80px rgba(0,0,0,0.9), 0 0 30px rgba(0,200,255,0.1);
+}
+
+.analysis-modal h2 { font-size: 1.35rem; font-weight: 800; letter-spacing:-0.04em; margin-bottom: 4px; }
+.analysis-modal h2 .accent { color: var(--neon); }
+.analysis-modal .sub { font-family: var(--font-mono); font-size: 11px; color: var(--text3); margin-bottom: 1.5rem; }
+
+.analysis-loading { text-align:center; padding:3rem 1rem; }
+.big-spinner {
+  width:40px; height:40px;
+  border:2px solid var(--bg4);
+  border-top-color: var(--neon);
+  border-radius:50%;
+  animation:spin 0.8s linear infinite;
+  margin:0 auto 1rem;
+  box-shadow: var(--neon-glow-sm);
+}
+@keyframes spin { to{transform:rotate(360deg)} }
+.analysis-loading p { font-family:var(--font-mono); font-size:11px; color:var(--text3); }
+
+.analysis-result { display:none; }
+.analysis-result.visible { display:block; }
+
+.a-section { margin-bottom:1.5rem; }
+.a-section h3 {
+  font-family:var(--font-mono);
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:0.1em;
+  color:var(--text3);
+  margin-bottom:0.75rem;
+  padding-bottom:6px;
+  border-bottom:1px solid var(--border);
+}
+
+.feedback-box {
+  background:var(--bg3);
+  border-radius:var(--radius);
+  padding:0.875rem 1rem;
+  font-family:var(--font-mono);
+  font-size:11px;
+  color:var(--text2);
+  line-height:1.75;
+}
+
+@media(max-width:800px){
+  header{padding:0 1rem;}
+  main{padding:1rem;}
+  .week-grid{gap:4px;}
+  .dp-focus{display:none;}
+  .progress-grid{grid-template-columns:repeat(3,1fr);}
+  .reminders-layout{grid-template-columns:1fr;}
+  nav button{padding:5px 8px; font-size:10px;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">sketch<span>log</span></div>
+  <nav>
+    <button class="active" onclick="switchView('schedule',this)">Schedule</button>
+    <button onclick="switchView('log',this)">Practice Log</button>
+    <button onclick="switchView('hof',this)">Hall of Fame</button>
+    <button onclick="switchView('progress',this)">Progress</button>
+    <button onclick="switchView('reminders',this)">Reminders</button>
+  </nav>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;min-width:100px;">
+    <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:0.04em;" id="storageUsage">storage</div>
+    <div style="width:100px;height:3px;background:var(--bg4);border-radius:99px;overflow:hidden;">
+      <div id="storageBar" style="height:100%;width:0%;background:var(--neon);border-radius:99px;transition:width 0.4s,background 0.4s;"></div>
+    </div>
+  </div>
+</header>
+
+<!-- STORAGE WARNING BANNER -->
+<div id="storageWarn" style="display:none;align-items:center;gap:10px;background:rgba(255,68,68,0.08);border:1px solid rgba(255,68,68,0.3);border-radius:var(--radius);padding:0.6rem 1.1rem;margin:0.75rem 2rem 0;font-family:var(--font-mono);font-size:11px;color:#ff8080;">
+  <span id="storageWarnText"></span>
+</div>
+
+<main>
+
+  <!-- ── SCHEDULE ── -->
+  <div class="view active" id="view-schedule">
+    <div id="aiBanner" class="ai-banner">
+      <div class="ai-banner-dot"></div>
+      <span id="aiBannerText">Schedule updated by AI.</span>
+    </div>
+    <div class="page-head">
+      <div>
+        <h1>Weekly <span class="accent">Schedule</span></h1>
+        <p>Intermediate · 1–2 hrs/day · 4–5 days/week</p>
+      </div>
+      <button class="btn btn-neon" onclick="openAnalysis()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        AI Review &amp; Update
+      </button>
+    </div>
+    <div class="week-grid" id="weekGrid"></div>
+    <div class="day-detail" id="dayDetail"></div>
+  </div>
+
+  <!-- ── LOG ── -->
+  <div class="view" id="view-log">
+    <div class="page-head">
+      <div>
+        <h1>Practice <span class="accent">Log</span></h1>
+        <p>Upload your drawings after each session</p>
+      </div>
+      <button class="btn btn-neon" onclick="openModal('uploadModal')">+ Add Session</button>
+    </div>
+    <div id="entriesContainer"></div>
+  </div>
+
+  <!-- ── HALL OF FAME ── -->
+  <div class="view" id="view-hof">
+    <div class="page-head">
+      <div>
+        <h1>Hall of <span class="accent">Fame</span></h1>
+        <p>Your finest work — curated, displayed, analysed by AI</p>
+      </div>
+      <button class="btn btn-neon" onclick="openModal('hofModal')">+ Add Artwork</button>
+    </div>
+    <div class="hof-hero">
+      <h2>⭐ Your Best Work</h2>
+      <p>Showcase finished illustrations here. The AI analyses these alongside your practice sessions for deeper insight.</p>
+    </div>
+    <div id="hofContainer"></div>
+  </div>
+
+  <!-- ── PROGRESS ── -->
+  <div class="view" id="view-progress">
+    <div class="page-head">
+      <div>
+        <h1>Progress <span class="accent">Tracker</span></h1>
+        <p>Visualise your improvement over time</p>
+      </div>
+    </div>
+    <div class="progress-grid" id="statsGrid"></div>
+    <div class="chart-card">
+      <h3>Sessions per week</h3>
+      <div class="chart-wrap"><canvas id="sessionsChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Skill scores over time (AI assessments)</h3>
+      <div class="chart-wrap"><canvas id="skillChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <h3>Latest AI skill assessment</h3>
+      <div class="skill-rows" id="skillBars"></div>
+    </div>
+  </div>
+
+  <!-- ── REMINDERS ── -->
+  <div class="view" id="view-reminders">
+    <div class="page-head">
+      <div>
+        <h1>Reminder <span class="accent">System</span></h1>
+        <p>Stay consistent with your practice</p>
+      </div>
+    </div>
+    <div class="reminders-layout">
+      <div>
+        <div class="reminder-list" id="reminderList"></div>
+      </div>
+      <div class="reminder-add-card">
+        <h3>Add a reminder</h3>
+        <div class="form-group">
+          <label>Label</label>
+          <input type="text" id="r-label" placeholder="e.g. Morning gesture practice">
+        </div>
+        <div class="form-group">
+          <label>Time</label>
+          <input type="time" id="r-time" value="09:00">
+        </div>
+        <div class="form-group">
+          <label>Days</label>
+          <div id="dayPicker" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;">
+            {['M','T','W','T','F','S','S'].map((d,i)=>`<button class="day-pick-btn" data-day="${i}" onclick="toggleDay(this)">${d}</button>`).join('')}
+          </div>
+        </div>
+        <button class="btn btn-neon" style="width:100%;justify-content:center;margin-top:0.5rem;" onclick="addReminder()">Add Reminder</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── UPLOAD MODAL ── -->
+<div class="modal-overlay" id="uploadModal">
+  <div class="modal">
+    <h2>Log a <span class="accent">session</span></h2>
+    <div class="form-group">
+      <label>Date</label>
+      <input type="date" id="entryDate">
+    </div>
+    <div class="form-group">
+      <label>Focus area</label>
+      <select id="entryFocus">
+        <option>Fundamentals</option>
+        <option>Figure &amp; Anatomy</option>
+        <option>Faces &amp; Portraits</option>
+        <option>Colour &amp; Shading</option>
+        <option>Personal Style</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Session notes</label>
+      <textarea id="entryNotes" placeholder="What did you work on? What felt hard? Any breakthroughs?"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Upload drawing (optional)</label>
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <div class="drop-zone-icon">✏️</div>
+        <p id="dropText">Click or drag &amp; drop your drawing</p>
+        <img id="previewImg" alt="">
+      </div>
+      <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFile(event,'previewImg','dropZone','dropText')">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('uploadModal')">Cancel</button>
+      <button class="btn btn-neon" onclick="saveEntry()">Save Session</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── HOF MODAL ── -->
+<div class="modal-overlay" id="hofModal">
+  <div class="modal">
+    <h2>Add to <span class="accent">Hall of Fame</span></h2>
+    <div class="form-group">
+      <label>Title</label>
+      <input type="text" id="hof-title" placeholder="e.g. Character portrait study">
+    </div>
+    <div class="form-group">
+      <label>Date completed</label>
+      <input type="date" id="hof-date">
+    </div>
+    <div class="form-group">
+      <label>Medium / style</label>
+      <input type="text" id="hof-medium" placeholder="e.g. Digital, pencil, ink...">
+    </div>
+    <div class="form-group">
+      <label>Description</label>
+      <textarea id="hof-desc" placeholder="What makes this special? What did you learn?"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Artwork image</label>
+      <div class="drop-zone" id="hof-dropZone" onclick="document.getElementById('hofFileInput').click()">
+        <div class="drop-zone-icon">🖼️</div>
+        <p id="hof-dropText">Click or drag &amp; drop your artwork</p>
+        <img id="hof-previewImg" alt="">
+      </div>
+      <input type="file" id="hofFileInput" accept="image/*" style="display:none" onchange="handleFile(event,'hof-previewImg','hof-dropZone','hof-dropText')">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('hofModal')">Cancel</button>
+      <button class="btn btn-neon" onclick="saveHof()">Add to Gallery</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── AI ANALYSIS MODAL ── -->
+<div class="modal-overlay" id="analysisModal">
+  <div class="analysis-modal">
+    <h2>AI <span class="accent">Review</span></h2>
+    <p class="sub">Analysing your practice log and hall of fame to personalise your schedule…</p>
+    <div class="analysis-loading" id="analysisLoading">
+      <div class="big-spinner"></div>
+      <p id="analysisLoadingText">Reviewing your work…</p>
+    </div>
+    <div class="analysis-result" id="analysisResult">
+      <div class="a-section">
+        <h3>Skill Assessment</h3>
+        <div class="skill-rows" id="a-skillBars"></div>
+      </div>
+      <div class="a-section">
+        <h3>Feedback</h3>
+        <div class="feedback-box" id="a-feedback"></div>
+      </div>
+      <div class="a-section">
+        <h3>Schedule Changes</h3>
+        <div class="feedback-box" id="a-changes"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeModal('analysisModal')">Dismiss</button>
+        <button class="btn btn-neon" onclick="applySchedule()">Apply Schedule</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── LIGHTBOX ── -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<script>
+// ─── STORAGE ─────────────────────────────────────────────────
+const KEY = 'sketchlog_v2';
+function load(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch{return{}}}
+function save(d){localStorage.setItem(KEY,JSON.stringify(d))}
+
+// ─── DEFAULT SCHEDULE ─────────────────────────────────────────
+const defaultSched = [
+  {id:0,label:'Monday',rest:false,focus:'Fundamentals',duration:'60–90 min',sessions:[
+    {time:'0–15 min',name:'Line drills',desc:'Straight lines, curves, ellipses at varying speeds. No lifting the pen.'},
+    {time:'15–45 min',name:'Perspective practice',desc:'1- and 2-point perspective. Boxes, rooms, cityscapes.'},
+    {time:'45–90 min',name:'Shape construction',desc:'Break complex objects into simple forms. Sketch from observation.'}
+  ],tip:'Treat fundamentals like scales in music — cleaner lines now means freer drawing later.'},
+  {id:1,label:'Tuesday',rest:false,focus:'Figure & Anatomy',duration:'60–90 min',sessions:[
+    {time:'0–15 min',name:'Gesture drawing',desc:'30s–2 min poses. Capture flow, not detail.'},
+    {time:'15–60 min',name:'Anatomy deep-dive',desc:'Rotate through body regions weekly — arms, torso, legs, hands.'},
+    {time:'60–90 min',name:'Reference figure',desc:'One full pose built methodically from skeleton outward.'}
+  ],tip:'Always start loose and gestural before tightening up, even on anatomy days.'},
+  {id:2,label:'Wednesday',rest:true,focus:'Rest',duration:'',sessions:[],tip:''},
+  {id:3,label:'Thursday',rest:false,focus:'Faces & Portraits',duration:'60–90 min',sessions:[
+    {time:'0–15 min',name:'Feature warm-up',desc:'Quick sketches of eyes, noses, lips, ears — vary the angle each time.'},
+    {time:'15–50 min',name:'Portrait from reference',desc:'Focus on structure — planes of the face, feature placement.'},
+    {time:'50–90 min',name:'Expression studies',desc:'Same face, 3–4 expressions. Study how muscles shift landmarks.'}
+  ],tip:'Two-minute life studies of real people build intuition that photos never can.'},
+  {id:4,label:'Friday',rest:false,focus:'Colour & Shading',duration:'60–90 min',sessions:[
+    {time:'0–10 min',name:'Value scales',desc:'5-step grey scale + a colour value scale. Re-centres your eye.'},
+    {time:'10–45 min',name:'Shading from reference',desc:'Identify light, shadow, core shadow, and reflected light.'},
+    {time:'45–90 min',name:'3-colour study',desc:'Limit palette. Paint a still-life or landscape crop. Constraint forces better decisions.'}
+  ],tip:'Value does the heavy lifting. Wrong value structure can\'t be saved by nice colour.'},
+  {id:5,label:'Saturday',rest:false,focus:'Personal Style',duration:'90–120 min',sessions:[
+    {time:'0–20 min',name:'Free sketching',desc:'No reference, no goals. 20 minutes of whatever comes to mind.'},
+    {time:'20–70 min',name:'Illustration project',desc:'Your voice — character, scene, or concept. No copying.'},
+    {time:'70–120 min',name:'Artist study',desc:'Pick one artist, analyse their style, then do one study in their manner.'}
+  ],tip:'Style is the residue of everything you\'ve studied. More influences = more distinct voice.'},
+  {id:6,label:'Sunday',rest:true,focus:'Rest',duration:'',sessions:[],tip:''}
+];
+
+// ─── STATE ───────────────────────────────────────────────────
+let state = {
+  schedule: JSON.parse(JSON.stringify(defaultSched)),
+  entries: [],
+  hof: [],
+  reminders: [
+    {id:1,label:'Daily practice session',time:'09:00',days:[0,1,3,4,5],active:true},
+    {id:2,label:'Weekly AI review',time:'10:00',days:[5],active:false},
+    {id:3,label:'Upload your drawings',time:'20:00',days:[0,1,3,4,5],active:false}
+  ],
+  skillHistory: [],
+  lastAiBanner: null
+};
+
+let activeDay = 0;
+let currentFiles = {};
+let pendingSched = null;
+let selectedDays = [0,1,3,4,5];
+let sessChart = null, skillChartInst = null;
+
+// ─── INIT ─────────────────────────────────────────────────────
+function init(){
+  const d = load();
+  if(d.schedule) state.schedule = d.schedule;
+  if(d.entries) state.entries = d.entries;
+  if(d.hof) state.hof = d.hof;
+  if(d.reminders) state.reminders = d.reminders;
+  if(d.skillHistory) state.skillHistory = d.skillHistory;
+  if(d.lastAiBanner){
+    document.getElementById('aiBannerText').textContent = d.lastAiBanner;
+    document.getElementById('aiBanner').classList.add('visible');
+  }
+  document.getElementById('entryDate').value = today();
+  document.getElementById('hof-date').value = today();
+  // Auto-select today's day (0=Sun in JS, so remap to Mon=0)
+  const jsDay = new Date().getDay(); // 0=Sun,1=Mon...6=Sat
+  const todayIdx = jsDay === 0 ? 6 : jsDay - 1; // remap to Mon=0...Sun=6
+  activeDay = todayIdx;
+  renderWeek(); renderDetail(todayIdx);
+  renderEntries(); renderHof();
+  renderProgress(); renderReminders();
+  buildDayPicker();
+  // Show current storage usage
+  try {
+    const existing = localStorage.getItem(KEY) || '';
+    const usedKB = Math.round((existing.length * 2) / 1024);
+    showStorageWarning(usedKB, 5000);
+  } catch(e) {}
+}
+
+function today(){ return new Date().toISOString().slice(0,10); }
+function fmtDate(d){ if(!d) return ''; return new Date(d+'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}); }
+
+// ─── VIEW SWITCH ──────────────────────────────────────────────
+function switchView(v,btn){
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+  document.getElementById('view-'+v).classList.add('active');
+  btn.classList.add('active');
+  if(v==='progress'){ setTimeout(()=>{ buildCharts(); buildSkillBars('skillBars', getLatestScores()); }, 100); }
+}
+
+// ─── MODALS ───────────────────────────────────────────────────
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){
+  document.getElementById(id).classList.remove('open');
+  if(id==='uploadModal'){
+    currentFiles['entry']=null;
+    resetDrop('dropZone','dropText','previewImg','fileInput','Click or drag & drop your drawing');
+    document.getElementById('entryNotes').value='';
+    document.getElementById('entryDate').value=today();
+  }
+  if(id==='hofModal'){
+    currentFiles['hof']=null;
+    resetDrop('hof-dropZone','hof-dropText','hof-previewImg','hofFileInput','Click or drag & drop your artwork');
+    document.getElementById('hof-title').value='';
+    document.getElementById('hof-desc').value='';
+    document.getElementById('hof-medium').value='';
+    document.getElementById('hof-date').value=today();
+  }
+  if(id==='analysisModal'){
+    // Reset analysis modal state so it's clean next time
+    document.getElementById('analysisResult').classList.remove('visible');
+    document.getElementById('analysisLoading').style.display='block';
+    document.getElementById('analysisLoadingText').textContent='Reviewing your work…';
+  }
+}
+
+function resetDrop(dzId,txtId,imgId,inputId,placeholder){
+  const dz=document.getElementById(dzId);
+  dz.classList.remove('has-file','drag-over');
+  document.getElementById(txtId).textContent=placeholder;
+  const img=document.getElementById(imgId); img.style.display='none'; img.src='';
+  document.getElementById(inputId).value='';
+}
+
+// ─── FILE HANDLING ────────────────────────────────────────────
+function handleFile(e,imgId,dzId,txtId){
+  const file=e.target.files[0]; if(!file) return;
+  const key = dzId.includes('hof') ? 'hof' : 'entry';
+  currentFiles[key]=file;
+  const r=new FileReader();
+  r.onload=ev=>{
+    const img=document.getElementById(imgId);
+    img.src=ev.target.result; img.style.display='block';
+    document.getElementById(txtId).textContent=file.name;
+    document.getElementById(dzId).classList.add('has-file');
+  };
+  r.readAsDataURL(file);
+}
+
+// Drag & drop for both zones
+['dropZone','hof-dropZone'].forEach(id=>{
+  const dz=document.getElementById(id);
+  if(!dz) return;
+  const isHof = id.includes('hof');
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+  dz.addEventListener('drop',e=>{
+    e.preventDefault(); dz.classList.remove('drag-over');
+    const file=e.dataTransfer.files[0];
+    if(file&&file.type.startsWith('image/')){
+      const inputId = isHof?'hofFileInput':'fileInput';
+      const dt=new DataTransfer(); dt.items.add(file);
+      document.getElementById(inputId).files=dt.files;
+      handleFile({target:{files:[file]}}, isHof?'hof-previewImg':'previewImg', id, isHof?'hof-dropText':'dropText');
+    }
+  });
+});
+
+// ─── SCHEDULE ─────────────────────────────────────────────────
+function renderWeek(){
+  document.getElementById('weekGrid').innerHTML = state.schedule.map(d=>`
+    <div class="day-pill ${d.rest?'rest':''} ${d.id===activeDay&&!d.rest?'active':''}"
+         onclick="${d.rest?'':(`selectDay(${d.id})`)}">
+      <div class="dp-label">${d.label.slice(0,3).toUpperCase()}</div>
+      <div class="dp-focus">${d.rest?'—':d.focus}</div>
+      ${!d.rest?`<div class="dp-time">${d.duration}</div>`:''}
+    </div>`).join('');
+}
+
+function renderDetail(id){
+  const d=state.schedule[id];
+  const el=document.getElementById('dayDetail');
+  if(d.rest){el.innerHTML=`<p style="text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:12px;padding:2rem;">Rest day — your brain consolidates learning while you sleep.</p>`;return;}
+  el.innerHTML=`
+    <div class="detail-top">
+      <h2>${d.label} — ${d.focus}</h2>
+      <span class="focus-tag">${d.duration}</span>
+    </div>
+    <div class="sessions">
+      ${d.sessions.map(s=>`
+        <div class="session">
+          <div class="s-time">${s.time}</div>
+          <div><div class="s-name">${s.name}</div><div class="s-desc">${s.desc}</div></div>
+        </div>`).join('')}
+    </div>
+    ${d.tip?`<div class="tip-strip"><strong>Tip</strong>${d.tip}</div>`:''}`;
+}
+
+function selectDay(id){ activeDay=id; renderWeek(); renderDetail(id); }
+
+// ─── LOG ENTRIES ──────────────────────────────────────────────
+function saveEntry(){
+  const focus=document.getElementById('entryFocus').value;
+  const notes=document.getElementById('entryNotes').value.trim();
+  const date=document.getElementById('entryDate').value;
+  const entry={id:Date.now(),date,focus,notes,imageData:null};
+  if(currentFiles['entry']){
+    const r=new FileReader();
+    r.onload=ev=>{
+      compressImage(ev.target.result, 600, 0.6, compressed=>{
+        entry.imageData=compressed;
+        pushEntry(entry);
+      });
+    };
+    r.readAsDataURL(currentFiles['entry']);
+  } else { pushEntry(entry); }
+}
+
+function pushEntry(entry){
+  state.entries.unshift(entry);
+  const d=load(); d.entries=state.entries; safeSave(d);
+  renderEntries(); renderProgress(); closeModal('uploadModal');
+}
+
+function renderEntries(){
+  const c=document.getElementById('entriesContainer');
+  if(!state.entries.length){
+    c.innerHTML=`<div class="empty"><div class="empty-icon">✏️</div><h3>No sessions yet</h3><p>Start logging your practice sessions.<br>The AI uses these to personalise your schedule.</p></div>`;
+    return;
+  }
+  c.innerHTML=`<div class="entries-grid">${state.entries.map((e,i)=>`
+    <div class="entry-card">
+      ${e.imageData?`<img class="entry-img" src="${e.imageData}" alt="" onclick="openLightboxEntry(${i})" style="cursor:zoom-in">`:`<div class="entry-img-placeholder">✏️</div>`}
+      <div class="entry-body">
+        <div class="entry-meta">
+          <span class="entry-tag">${e.focus}</span>
+          <span class="entry-date">${fmtDate(e.date)}</span>
+        </div>
+        <div class="entry-focus">${e.focus}</div>
+        <div class="entry-notes">${e.notes||'<span style="color:var(--text3)">No notes</span>'}</div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+// ─── HALL OF FAME ─────────────────────────────────────────────
+function saveHof(){
+  const title=document.getElementById('hof-title').value.trim();
+  if(!title){ alert('Please add a title first.'); return; }
+  const item={id:Date.now(),title,date:document.getElementById('hof-date').value,medium:document.getElementById('hof-medium').value.trim(),desc:document.getElementById('hof-desc').value.trim(),imageData:null};
+  if(currentFiles['hof']){
+    const r=new FileReader();
+    r.onload=ev=>{
+      compressImage(ev.target.result, 900, 0.7, compressed=>{
+        item.imageData=compressed;
+        pushHof(item);
+      });
+    };
+    r.readAsDataURL(currentFiles['hof']);
+  } else { pushHof(item); }
+}
+
+function pushHof(item){
+  state.hof.unshift(item);
+  const d=load(); d.hof=state.hof; safeSave(d);
+  renderHof(); closeModal('hofModal');
+}
+
+function renderHof(){
+  const c=document.getElementById('hofContainer');
+  if(!state.hof.length){
+    c.innerHTML=`<div class="empty"><div class="empty-icon">⭐</div><h3>Nothing yet</h3><p>Add your best finished illustrations here.<br>The AI analyses these for richer schedule feedback.</p></div>`;
+    return;
+  }
+  c.innerHTML=`<div class="hof-grid">${state.hof.map((h,i)=>`
+    <div class="hof-card" ${h.imageData?`onclick="openLightboxHof(${i})" style="cursor:zoom-in"`:''}>
+      <div class="hof-img-wrap">
+        ${h.imageData?`<img class="hof-img" src="${h.imageData}" alt="${h.title.replace(/"/g,'')}">`:`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:2.5rem;">🖼️</div>`}
+        <div class="hof-star">⭐</div>
+      </div>
+      <div class="hof-body">
+        <div class="hof-title">${h.title}</div>
+        <div class="hof-meta">
+          ${h.date?`<span>${fmtDate(h.date)}</span>`:''}
+          ${h.medium?`<span>${h.medium}</span>`:''}
+        </div>
+        ${h.desc?`<div class="hof-desc">${h.desc}</div>`:''}
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+// ─── LIGHTBOX ────────────────────────────────────────────────
+function openLightboxEntry(i){ openLightbox(state.entries[i].imageData); }
+function openLightboxHof(i){ openLightbox(state.hof[i].imageData); }
+function openLightbox(src){ document.getElementById('lightboxImg').src=src; document.getElementById('lightbox').classList.add('open'); }
+function closeLightbox(){ document.getElementById('lightbox').classList.remove('open'); }
+
+// ─── SAFE STORAGE (compresses images before saving) ───────────
+function compressImage(dataUrl, maxW, quality, cb){
+  const img=new Image();
+  img.onload=()=>{
+    const scale=Math.min(1, maxW/Math.max(img.width,img.height));
+    const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+    const canvas=document.createElement('canvas');
+    canvas.width=w; canvas.height=h;
+    canvas.getContext('2d').drawImage(img,0,0,w,h);
+    cb(canvas.toDataURL('image/jpeg', quality));
+  };
+  img.src=dataUrl;
+}
+
+function safeSave(data){
+  try {
+    const str = JSON.stringify(data);
+    const sizeKB = Math.round((str.length * 2) / 1024);
+    const limitKB = 5000;
+    localStorage.setItem(KEY, str);
+    // Show storage warning if over 70% full
+    showStorageWarning(sizeKB, limitKB);
+    return true;
+  } catch(e) {
+    // Storage full — save everything except images
+    try {
+      const slim = JSON.parse(JSON.stringify(data));
+      slim.entries = (slim.entries||[]).map(e=>({...e, imageData: null}));
+      slim.hof = (slim.hof||[]).map(h=>({...h, imageData: null}));
+      localStorage.setItem(KEY, JSON.stringify(slim));
+      showStorageWarning(5000, 5000);
+    } catch(e2) { console.error('Storage completely full', e2); }
+    return false;
+  }
+}
+
+function showStorageWarning(usedKB, limitKB){
+  let bar = document.getElementById('storageBar');
+  if(!bar) return;
+  const pct = Math.min(100, Math.round((usedKB/limitKB)*100));
+  const el = document.getElementById('storageUsage');
+  if(el) el.textContent = `${usedKB}KB / ~${limitKB}KB`;
+  bar.style.width = pct + '%';
+  bar.style.background = pct > 85 ? '#ff4444' : pct > 60 ? '#ffc107' : '#00c8ff';
+  const warn = document.getElementById('storageWarn');
+  if(warn){
+    warn.style.display = pct > 75 ? 'flex' : 'none';
+    document.getElementById('storageWarnText').textContent = pct >= 100
+      ? '⚠️ Storage full — images may not be saving. Consider putting the site on Netlify for unlimited storage.'
+      : `⚠️ Storage ${pct}% full — upload fewer images per session, or move to Netlify soon.`;
+  }
+}
+
+// ─── PROGRESS ─────────────────────────────────────────────────
+function renderProgress(){
+  const total=state.entries.length+state.hof.length;
+  const thisWeek=getThisWeekCount();
+  const streak=getStreak();
+  const latest=getLatestScores();
+  const avgScore=latest?Math.round(Object.values(latest).reduce((a,b)=>a+b,0)/Object.keys(latest).length):0;
+
+  document.getElementById('statsGrid').innerHTML=`
+    <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-label">Total Sessions</div></div>
+    <div class="stat-card"><div class="stat-val">${thisWeek}</div><div class="stat-label">This Week</div></div>
+    <div class="stat-card"><div class="stat-val">${streak}</div><div class="stat-label">Day Streak</div></div>
+    <div class="stat-card"><div class="stat-val">${state.hof.length}</div><div class="stat-label">Hall of Fame</div></div>
+    <div class="stat-card"><div class="stat-val">${avgScore||'—'}</div><div class="stat-label">Avg AI Score</div></div>`;
+}
+
+function getThisWeekCount(){
+  const now=new Date(); const monday=new Date(now);
+  monday.setDate(now.getDate()-((now.getDay()+6)%7)); monday.setHours(0,0,0,0);
+  return state.entries.filter(e=>new Date(e.date+'T00:00:00')>=monday).length;
+}
+
+function getStreak(){
+  if(!state.entries.length) return 0;
+  const dates=[...new Set(state.entries.map(e=>e.date))].sort().reverse();
+  let streak=0,cur=new Date(); cur.setHours(0,0,0,0);
+  for(const d of dates){
+    const dt=new Date(d+'T00:00:00');
+    const diff=Math.round((cur-dt)/(1000*60*60*24));
+    if(diff<=1){ streak++; cur=dt; } else break;
+  }
+  return streak;
+}
+
+function getLatestScores(){
+  if(!state.skillHistory.length) return null;
+  return state.skillHistory[state.skillHistory.length-1].scores;
+}
+
+function buildSkillBars(containerId, scores){
+  const el=document.getElementById(containerId);
+  if(!scores||!el){ if(el) el.innerHTML=`<p style="font-family:var(--font-mono);font-size:11px;color:var(--text3)">Run an AI review to see skill scores.</p>`; return; }
+  const cols={'Fundamentals':'#00c8ff','Figure & Anatomy':'#00e676','Faces & Portraits':'#ff6b35','Colour & Shading':'#a855f7','Personal Style':'#ffc107'};
+  el.innerHTML=Object.entries(scores).map(([k,v])=>`
+    <div class="skill-row">
+      <div class="skill-name">${k}</div>
+      <div class="skill-bar-bg"><div class="skill-bar-fill" style="width:${v*10}%;background:${cols[k]||'var(--neon)'};box-shadow:0 0 8px ${cols[k]||'var(--neon)'}55"></div></div>
+      <div class="skill-score">${v}/10</div>
+    </div>`).join('');
+}
+
+function buildCharts(){
+  buildSessionsChart();
+  buildSkillChart();
+}
+
+function buildSessionsChart(){
+  const ctx=document.getElementById('sessionsChart');
+  if(!ctx) return;
+  if(sessChart){ sessChart.destroy(); sessChart=null; }
+
+  const weeks={}; 
+  state.entries.forEach(e=>{
+    const d=new Date(e.date+'T00:00:00');
+    const mon=new Date(d); mon.setDate(d.getDate()-((d.getDay()+6)%7));
+    const k=mon.toISOString().slice(0,10);
+    weeks[k]=(weeks[k]||0)+1;
+  });
+
+  const labels=Object.keys(weeks).sort().slice(-8).map(w=>{
+    const d=new Date(w+'T00:00:00'); return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+  });
+  const vals=Object.keys(weeks).sort().slice(-8).map(k=>weeks[k]);
+
+  if(!labels.length){ labels.push('No data yet'); vals.push(0); }
+
+  sessChart=new Chart(ctx,{
+    type:'bar',
+    data:{ labels, datasets:[{ data:vals, backgroundColor:'rgba(0,200,255,0.25)', borderColor:'rgba(0,200,255,0.8)', borderWidth:1.5, borderRadius:4 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#444',font:{family:'JetBrains Mono',size:10}}},
+               y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#444',font:{family:'JetBrains Mono',size:10},stepSize:1}} } }
+  });
+}
+
+function buildSkillChart(){
+  const ctx=document.getElementById('skillChart');
+  if(!ctx) return;
+  if(skillChartInst){ skillChartInst.destroy(); skillChartInst=null; }
+  if(!state.skillHistory.length){
+    const parent=ctx.parentElement;
+    parent.innerHTML=`<p style="font-family:var(--font-mono);font-size:11px;color:var(--text3);padding:1rem;">Run at least one AI review to see skill trends.</p>`;
+    return;
+  }
+  const skills=['Fundamentals','Figure & Anatomy','Faces & Portraits','Colour & Shading','Personal Style'];
+  const cols=['#00c8ff','#00e676','#ff6b35','#a855f7','#ffc107'];
+  const labels=state.skillHistory.map((_,i)=>`Review ${i+1}`);
+  const datasets=skills.map((s,i)=>({
+    label:s, data:state.skillHistory.map(h=>h.scores[s]||0),
+    borderColor:cols[i], backgroundColor:cols[i]+'22',
+    borderWidth:2, pointRadius:4, pointBackgroundColor:cols[i], tension:0.3, fill:false
+  }));
+  skillChartInst=new Chart(ctx,{
+    type:'line', data:{labels,datasets},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ labels:{color:'#666',font:{family:'JetBrains Mono',size:10}} } },
+      scales:{ x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#444',font:{family:'JetBrains Mono',size:10}}},
+               y:{min:0,max:10,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#444',font:{family:'JetBrains Mono',size:10}}} } }
+  });
+}
+
+// ─── REMINDERS ────────────────────────────────────────────────
+const DAYS_SHORT=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+function buildDayPicker(){
+  const c=document.getElementById('dayPicker');
+  if(!c) return;
+  c.innerHTML=DAYS_SHORT.map((d,i)=>`
+    <button class="day-pick-btn" data-day="${i}" onclick="toggleDay(this)"
+      style="width:34px;height:34px;border-radius:50%;border:1px solid var(--border2);background:${selectedDays.includes(i)?'var(--neon)':'var(--bg3)'};color:${selectedDays.includes(i)?'#000':'var(--text2)'};font-family:var(--font-mono);font-size:10px;cursor:pointer;transition:all 0.15s;">${d}</button>
+  `).join('');
+}
+
+function toggleDay(btn){
+  const day=parseInt(btn.dataset.day);
+  const idx=selectedDays.indexOf(day);
+  if(idx>-1) selectedDays.splice(idx,1); else selectedDays.push(day);
+  buildDayPicker();
+}
+
+function addReminder(){
+  const label=document.getElementById('r-label').value.trim();
+  const time=document.getElementById('r-time').value;
+  if(!label) return;
+  const r={id:Date.now(),label,time,days:[...selectedDays].sort(),active:true};
+  state.reminders.push(r);
+  const d=load(); d.reminders=state.reminders; safeSave(d);
+  renderReminders();
+  document.getElementById('r-label').value='';
+}
+
+function toggleReminder(id){
+  const r=state.reminders.find(x=>x.id===id);
+  if(r) r.active=!r.active;
+  const d=load(); d.reminders=state.reminders; safeSave(d);
+  renderReminders();
+}
+
+function deleteReminder(id){
+  state.reminders=state.reminders.filter(x=>x.id!==id);
+  const d=load(); d.reminders=state.reminders; safeSave(d);
+  renderReminders();
+}
+
+function renderReminders(){
+  const c=document.getElementById('reminderList');
+  if(!state.reminders.length){
+    c.innerHTML=`<div class="empty"><div class="empty-icon">🔔</div><h3>No reminders</h3><p>Add your first reminder on the right.</p></div>`;
+    return;
+  }
+  c.innerHTML=state.reminders.map(r=>`
+    <div class="reminder-item ${r.active?'active':''}">
+      <div class="r-indicator ${r.active?'on':'off'}"></div>
+      <div class="r-body">
+        <div class="r-label">${r.label}</div>
+        <div class="r-sub">${r.time} · ${r.days.map(d=>DAYS_SHORT[d]).join(', ')}</div>
+      </div>
+      <label class="r-toggle">
+        <input type="checkbox" ${r.active?'checked':''} onchange="toggleReminder(${r.id})">
+        <span class="r-slider"></span>
+      </label>
+      <button onclick="deleteReminder(${r.id})" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px;font-size:16px;line-height:1;transition:color 0.15s;" onmouseover="this.style.color='var(--red)'" onmouseout="this.style.color='var(--text3)'">×</button>
+    </div>`).join('');
+}
+
+// ─── AI ANALYSIS ─────────────────────────────────────────────
+function openAnalysis(){
+  // Gate: need at least some data for a meaningful review
+  const hasEntries = state.entries.length > 0;
+  const hasHof = state.hof.length > 0;
+  if(!hasEntries && !hasHof){
+    alert('Add at least one practice session or Hall of Fame piece first — the AI needs your work to analyse!');
+    return;
+  }
+  openModal('analysisModal');
+  document.getElementById('analysisLoading').style.display='block';
+  document.getElementById('analysisLoading').style.textAlign='center';
+  document.getElementById('analysisLoadingText').textContent='Reviewing your work…';
+  document.getElementById('analysisResult').classList.remove('visible');
+  pendingSched=null;
+  runAnalysis();
+}
+
+async function runAnalysis(){
+  const msgs=['Reviewing your drawings…','Analysing skill areas…','Checking hall of fame…','Building your new schedule…','Almost done…'];
+  let mi=0; const msgEl=document.getElementById('analysisLoadingText');
+  const ticker=setInterval(()=>{ mi=(mi+1)%msgs.length; msgEl.textContent=msgs[mi]; },2500);
+
+  // Only include real images (guard against '[image]' placeholder strings from storage overflow)
+  const validEntries = state.entries.filter(e=>e.imageData && e.imageData.startsWith('data:image'));
+  const validHof = state.hof.filter(h=>h.imageData && h.imageData.startsWith('data:image'));
+  // Limit to 2 images total to avoid timeout — prioritise Hall of Fame
+  const allImages=[...validHof.slice(0,2), ...validEntries.slice(0,2)].slice(0,3);
+  const content=[];
+
+  if(allImages.length){
+    const entryCount = validEntries.slice(0,5).length;
+    const hofCount = validHof.slice(0,4).length;
+    content.push({type:'text',text:`Here is my drawing work: ${entryCount} practice session image(s) and ${hofCount} finished illustration(s) from my Hall of Fame. Please analyse all of it carefully and update my schedule based on what you observe.`});
+    for(const item of allImages){
+      try {
+        const mt = item.imageData.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+        const b64 = item.imageData.split(',')[1];
+        if(!b64) continue;
+        content.push({type:'image',source:{type:'base64',media_type:mt,data:b64}});
+        const label = item.focus
+          ? `Practice session — Focus: ${item.focus}. Notes: ${item.notes||'none'}.`
+          : `Hall of Fame piece — Title: "${item.title||'untitled'}". Medium: ${item.medium||'unspecified'}. Notes: ${item.desc||'none'}.`;
+        content.push({type:'text',text:label});
+      } catch(imgErr){ continue; }
+    }
+  } else {
+    // No images but has text entries — still useful
+    const entrySum = state.entries.slice(0,10).map(e=>`- ${e.focus} (${e.date}): ${e.notes||'no notes'}`).join('\n');
+    const hofSum = state.hof.slice(0,5).map(h=>`- "${h.title}" (${h.medium||'unknown medium'}): ${h.desc||'no description'}`).join('\n');
+    let text = 'My recent practice sessions:\n'+entrySum;
+    if(hofSum) text += '\n\nMy Hall of Fame pieces:\n'+hofSum;
+    text += '\n\n(No images were available — please base your assessment on these notes.)';
+    content.push({type:'text',text});
+  }
+
+  const sys=`You are an expert drawing coach reviewing a student's work. The student is an intermediate artist practising 1–2 hours/day, 4–5 days/week.
+Their focus areas: Fundamentals, Figure & Anatomy, Faces & Portraits, Colour & Shading, Personal Style.
+Analyse everything provided and respond ONLY with this exact JSON format — no markdown, no preamble, no trailing text:
+{"scores":{"Fundamentals":<1-10>,"Figure & Anatomy":<1-10>,"Faces & Portraits":<1-10>,"Colour & Shading":<1-10>,"Personal Style":<1-10>},"feedback":"<2-4 sentences of specific, honest, constructive feedback referencing what you actually see>","changes":"<2-3 sentences explaining exactly which schedule areas you are changing and why, based on the scores>","schedule":[{"id":0,"label":"Monday","rest":false,"focus":"<one of the 5 focus areas>","duration":"<e.g. 60-90 min>","sessions":[{"time":"<time range>","name":"<exercise name>","desc":"<specific description>"},{"time":"<time range>","name":"<exercise name>","desc":"<specific description>"},{"time":"<time range>","name":"<exercise name>","desc":"<specific description>"}],"tip":"<one practical tip>"},{"id":1,"label":"Tuesday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":2,"label":"Wednesday","rest":true,"focus":"Rest","duration":"","sessions":[],"tip":""},{"id":3,"label":"Thursday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":4,"label":"Friday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":5,"label":"Saturday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":6,"label":"Sunday","rest":true,"focus":"Rest","duration":"","sessions":[],"tip":""}]}
+RULES: Keep Wednesday (id:2) and Sunday (id:6) as rest days always. Give lowest-scored skills more time and harder exercises. Each object in schedule array MUST have the correct numeric "id" field (0–6). Do not truncate the JSON.`;
+
+  try{
+    const res = await fetch('/.netlify/functions/analyse',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-5',
+        max_tokens:2500,
+        system:sys,
+        messages:[{role:'user',content}]
+      })
+    });
+
+    clearInterval(ticker);
+
+    if(!res.ok){
+      const errBody = await res.text();
+      throw new Error(`API error ${res.status}: ${errBody}`);
+    }
+
+    const data = await res.json();
+
+    if(data.error){
+      throw new Error(data.error.message || 'API returned an error');
+    }
+
+    const raw = data.content.map(i=>i.type==='text'?i.text:'').join('').replace(/```json|```/g,'').trim();
+
+    let result;
+    try {
+      result = JSON.parse(raw);
+    } catch(parseErr) {
+      // Try to extract JSON if there's surrounding text
+      const match = raw.match(/\{[\s\S]*\}/);
+      if(match) result = JSON.parse(match[0]);
+      else throw new Error('Could not parse AI response as JSON');
+    }
+
+    // Validate the schedule has all 7 days
+    if(!result.schedule || result.schedule.length < 7){
+      throw new Error('Schedule incomplete in AI response');
+    }
+
+    pendingSched = result.schedule;
+    state.skillHistory.push({date:today(), scores:result.scores});
+    const d=load(); d.skillHistory=state.skillHistory; safeSave(d);
+
+    buildSkillBars('a-skillBars', result.scores);
+    document.getElementById('a-feedback').textContent = result.feedback;
+    document.getElementById('a-changes').textContent = result.changes;
+    document.getElementById('analysisLoading').style.display = 'none';
+    document.getElementById('analysisResult').classList.add('visible');
+
+  } catch(err){
+    clearInterval(ticker);
+    console.error('AI analysis error:', err);
+    msgEl.textContent = `Error: ${err.message || 'Something went wrong'}. Please close and try again.`;
+  }
+}
+
+function applySchedule(){
+  if(!pendingSched) return;
+  state.schedule=pendingSched;
+  const banner=`Schedule updated by AI on ${new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'})}`;
+  state.lastAiBanner=banner;
+  const d=load(); d.schedule=state.schedule; d.lastAiBanner=banner; safeSave(d);
+  document.getElementById('aiBannerText').textContent=banner;
+  document.getElementById('aiBanner').classList.add('visible');
+  activeDay=0; renderWeek(); renderDetail(0);
+  closeModal('analysisModal');
+  // Switch to schedule tab and correctly highlight the first nav button
+  const schedBtn = document.querySelector('nav button:first-child');
+  switchView('schedule', schedBtn);
+}
+
+init();
+</script>
+</body>
+</html>
