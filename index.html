@@ -790,6 +790,17 @@ main { max-width: 1140px; margin: 0 auto; padding: 2rem; }
     </div>
     <div class="week-grid" id="weekGrid"></div>
     <div class="day-detail" id="dayDetail"></div>
+
+    <!-- TIPS & TRICKS -->
+    <div id="tipsSection" style="margin-top:1.5rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border);">
+        <div>
+          <h2 style="font-size:1.1rem;font-weight:700;letter-spacing:-0.03em;">Tips &amp; <span style="color:var(--neon);text-shadow:var(--neon-glow-sm);">Tricks</span></h2>
+          <p style="font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-top:3px;" id="tipsSubtitle">Personalised advice — updates after every AI review</p>
+        </div>
+      </div>
+      <div id="tipsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;"></div>
+    </div>
   </div>
 
   <!-- ── LOG ── -->
@@ -1035,7 +1046,8 @@ let state = {
     {id:3,label:'Upload your drawings',time:'20:00',days:[0,1,3,4,5],active:false}
   ],
   skillHistory: [],
-  lastAiBanner: null
+  lastAiBanner: null,
+  aiTips: null
 };
 
 let activeDay = 0;
@@ -1052,6 +1064,7 @@ function init(){
   if(d.hof) state.hof = d.hof;
   if(d.reminders) state.reminders = d.reminders;
   if(d.skillHistory) state.skillHistory = d.skillHistory;
+  if(d.aiTips) state.aiTips = d.aiTips;
   if(d.lastAiBanner){
     document.getElementById('aiBannerText').textContent = d.lastAiBanner;
     document.getElementById('aiBanner').classList.add('visible');
@@ -1072,6 +1085,7 @@ function init(){
     const usedKB = Math.round((existing.length * 2) / 1024);
     showStorageWarning(usedKB, 5000);
   } catch(e) {}
+  renderTips(state.aiTips || null);
 }
 
 function today(){ return new Date().toISOString().slice(0,10); }
@@ -1510,7 +1524,32 @@ function renderReminders(){
     </div>`).join('');
 }
 
-// ─── AI ANALYSIS ─────────────────────────────────────────────
+// ─── TIPS & TRICKS ───────────────────────────────────────────
+const defaultTips = [
+  { icon: '✏️', title: 'Warm up every session', body: 'Spend the first 10–15 minutes on loose gesture drawings or line drills before tackling your main focus. Cold hands = stiff lines.' },
+  { icon: '👁️', title: 'Draw what you see, not what you think', body: 'Your brain fills in details that aren\'t there. Slow down and actually look at your reference — compare angles, proportions, and negative space.' },
+  { icon: '📐', title: 'Check proportions early', body: 'Mistakes caught in the sketch stage take seconds to fix. Mistakes caught after detailed rendering take hours. Block in big shapes first.' },
+  { icon: '🔁', title: 'Repeat, repeat, repeat', body: 'Draw the same thing 10 times in a row. The 10th attempt will always be dramatically better than the 1st. Repetition is the fastest route to muscle memory.' },
+  { icon: '🌑', title: 'Values before colour', body: 'Squint at your reference. If you can\'t read the light and shadow clearly in greyscale, colour won\'t save it. Nail your values first.' },
+  { icon: '📖', title: 'Study artists you admire', body: 'Pick one artist per week and analyse what makes their work distinctive. Line weight? Colour palette? Shape language? Then try one study in their style.' }
+];
+
+function renderTips(tips){
+  const grid = document.getElementById('tipsGrid');
+  const sub = document.getElementById('tipsSubtitle');
+  if(!grid) return;
+  const list = tips || defaultTips;
+  const isAI = !!tips;
+  if(sub) sub.textContent = isAI ? 'Personalised by AI based on your latest review' : 'Personalised advice — updates after every AI review';
+  grid.innerHTML = list.map(t => `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem;transition:border-color 0.15s;position:relative;overflow:hidden;"
+         onmouseover="this.style.borderColor='var(--neon)'" onmouseout="this.style.borderColor='var(--border)'">
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--neon),transparent);opacity:${isAI?1:0.3};"></div>
+      <div style="font-size:1.4rem;margin-bottom:8px;">${t.icon}</div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:-0.01em;margin-bottom:5px;">${t.title}</div>
+      <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.65;">${t.body}</div>
+    </div>`).join('');
+}
 function openAnalysis(){
   // Gate: need at least some data for a meaningful review
   const hasEntries = state.entries.length > 0;
@@ -1569,7 +1608,7 @@ async function runAnalysis(){
   const sys=`You are an expert drawing coach reviewing a student's work. The student is an intermediate artist practising 1–2 hours/day, 4–5 days/week.
 Their focus areas: Fundamentals, Figure & Anatomy, Faces & Portraits, Colour & Shading, Personal Style.
 Analyse everything provided and respond ONLY with this exact JSON format — no markdown, no preamble, no trailing text:
-{"scores":{"Fundamentals":<1-10>,"Figure & Anatomy":<1-10>,"Faces & Portraits":<1-10>,"Colour & Shading":<1-10>,"Personal Style":<1-10>},"feedback":"<2-4 sentences of specific, honest, constructive feedback referencing what you actually see>","changes":"<2-3 sentences explaining exactly which schedule areas you are changing and why, based on the scores>","schedule":[{"id":0,"label":"Monday","rest":false,"focus":"<one of the 5 focus areas>","duration":"<e.g. 60-90 min>","sessions":[{"time":"<time range>","name":"<exercise name>","desc":"<specific description>"},{"time":"<time range>","name":"<exercise name>","desc":"<specific description>"},{"time":"<time range>","name":"<exercise name>","desc":"<specific description>"}],"tip":"<one practical tip>"},{"id":1,"label":"Tuesday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":2,"label":"Wednesday","rest":true,"focus":"Rest","duration":"","sessions":[],"tip":""},{"id":3,"label":"Thursday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":4,"label":"Friday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":5,"label":"Saturday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":6,"label":"Sunday","rest":true,"focus":"Rest","duration":"","sessions":[],"tip":""}]}
+{"scores":{"Fundamentals":<1-10>,"Figure & Anatomy":<1-10>,"Faces & Portraits":<1-10>,"Colour & Shading":<1-10>,"Personal Style":<1-10>},"feedback":"<2-4 sentences of specific, honest, constructive feedback referencing what you actually see>","changes":"<2-3 sentences explaining exactly which schedule areas you are changing and why, based on the scores>","tips":[{"icon":"<single emoji>","title":"<short tip title>","body":"<2-3 sentence practical tip personalised to this student's specific weaknesses>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"}],"schedule":[{"id":0,"label":"Monday","rest":false,"focus":"<one of the 5 focus areas>","duration":"<e.g. 60-90 min>","sessions":[{"time":"<time range>","name":"<exercise name>","desc":"<specific description>"},{"time":"<time range>","name":"<exercise name>","desc":"<specific description>"},{"time":"<time range>","name":"<exercise name>","desc":"<specific description>"}],"tip":"<one practical tip>"},{"id":1,"label":"Tuesday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":2,"label":"Wednesday","rest":true,"focus":"Rest","duration":"","sessions":[],"tip":""},{"id":3,"label":"Thursday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":4,"label":"Friday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":5,"label":"Saturday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":6,"label":"Sunday","rest":true,"focus":"Rest","duration":"","sessions":[],"tip":""}]}
 RULES: Keep Wednesday (id:2) and Sunday (id:6) as rest days always. Give lowest-scored skills more time and harder exercises. Each object in schedule array MUST have the correct numeric "id" field (0–6). Do not truncate the JSON.`;
 
   try{
@@ -1616,7 +1655,8 @@ RULES: Keep Wednesday (id:2) and Sunday (id:6) as rest days always. Give lowest-
 
     pendingSched = result.schedule;
     state.skillHistory.push({date:today(), scores:result.scores});
-    const d=load(); d.skillHistory=state.skillHistory; safeSave(d);
+    if(result.tips) state.aiTips = result.tips;
+    const d=load(); d.skillHistory=state.skillHistory; if(result.tips) d.aiTips=result.tips; safeSave(d);
 
     buildSkillBars('a-skillBars', result.scores);
     document.getElementById('a-feedback').textContent = result.feedback;
@@ -1640,6 +1680,7 @@ function applySchedule(){
   document.getElementById('aiBannerText').textContent=banner;
   document.getElementById('aiBanner').classList.add('visible');
   activeDay=0; renderWeek(); renderDetail(0);
+  if(state.aiTips) renderTips(state.aiTips);
   closeModal('analysisModal');
   // Switch to schedule tab and correctly highlight the first nav button
   const schedBtn = document.querySelector('nav button:first-child');
