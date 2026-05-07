@@ -1573,7 +1573,7 @@ Analyse everything provided and respond ONLY with this exact JSON format — no 
 RULES: Keep Wednesday (id:2) and Sunday (id:6) as rest days always. Give lowest-scored skills more time and harder exercises. Each object in schedule array MUST have the correct numeric "id" field (0–6). Do not truncate the JSON.`;
 
   try{
-    const res = await fetch('/.netlify/functions/analyse',{
+    const res = await fetch('/api/analyse',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
