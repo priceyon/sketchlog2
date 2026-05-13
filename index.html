@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sketchlog</title>
+<title>Sketchlog v4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -1893,23 +1893,50 @@ function drawGenericDiagram(name){
 function openTaskDetail(dayId, sessionIdx){
   const d = state.schedule[parseInt(dayId)];
   const s = d.sessions[parseInt(sessionIdx)];
-  const detail = taskDetails[s.name];
 
-  const steps = detail ? detail.steps : [s.desc, 'Follow the general description above and apply it to your current skill level.', 'Take your time and focus on understanding, not just completion.'];
+  // Try exact match first, then partial match on task name
+  let detail = taskDetails[s.name];
+  if(!detail){
+    const key = Object.keys(taskDetails).find(k => s.name.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(s.name.toLowerCase()));
+    if(key) detail = taskDetails[key];
+  }
+
+  // Build steps — use built-in if available, otherwise parse the description into steps
+  let steps;
+  if(detail && detail.steps){
+    steps = detail.steps;
+  } else {
+    // Break the AI description into meaningful steps
+    const base = s.desc || '';
+    const sentences = base.split(/(?<=[.!?])\s+/).filter(s=>s.trim().length>0);
+    steps = sentences.length > 1 ? sentences : [base];
+    // Add standard practice steps
+    steps = [
+      `Set up your workspace and gather reference material relevant to: ${s.name}.`,
+      ...steps,
+      `Spend the full allocated time (${s.time}) on this exercise — resist the urge to move on early.`,
+      `At the end, take a photo and log it in your Practice Log with notes on what felt difficult.`
+    ];
+  }
+
   const diagram = detail && detail.diagram ? detail.diagram() : drawGenericDiagram(s.name);
+
+  // Remove any existing task modal
+  const existing = document.getElementById('taskModal');
+  if(existing) existing.remove();
 
   const modal = document.createElement('div');
   modal.className = 'modal-overlay open';
   modal.id = 'taskModal';
   modal.style.zIndex = '400';
   modal.innerHTML = `
-    <div class="modal" style="max-width:640px;">
+    <div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;">
         <div>
           <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">${d.label} · ${s.time}</div>
           <h2 style="font-size:1.2rem;font-weight:800;letter-spacing:-0.03em;">${s.name}</h2>
         </div>
-        <button onclick="document.getElementById('taskModal').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px;line-height:1;padding:4px;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">×</button>
+        <button id="closeTaskBtn" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:22px;line-height:1;padding:4px;flex-shrink:0;">×</button>
       </div>
 
       <div style="margin-bottom:1.25rem;">${diagram}</div>
@@ -1919,19 +1946,23 @@ function openTaskDetail(dayId, sessionIdx){
         <div style="display:flex;flex-direction:column;gap:10px;">
           ${steps.map((step,i)=>`
             <div style="display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:flex-start;">
-              <div style="width:24px;height:24px;border-radius:50%;background:var(--neon-dim);border:1px solid rgba(0,200,255,0.3);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:10px;color:var(--neon);flex-shrink:0;">${i+1}</div>
-              <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.7;padding-top:3px;">${step}</div>
+              <div style="width:24px;height:24px;border-radius:50%;background:var(--neon-dim);border:1px solid rgba(0,200,255,0.3);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:10px;color:var(--neon);flex-shrink:0;margin-top:2px;">${i+1}</div>
+              <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.7;">${step}</div>
             </div>`).join('')}
         </div>
       </div>
 
-      ${s.desc ? `<div style="background:rgba(0,200,255,0.06);border-left:2px solid var(--neon);padding:0.75rem 1rem;border-radius:0 var(--radius) var(--radius) 0;font-family:var(--font-mono);font-size:11px;color:rgba(0,200,255,0.8);line-height:1.7;margin-bottom:1rem;"><strong style="display:block;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;color:var(--neon);">Summary</strong>${s.desc}</div>` : ''}
+      ${d.tip ? `<div style="background:rgba(0,200,255,0.06);border-left:2px solid var(--neon);padding:0.75rem 1rem;border-radius:0 var(--radius) var(--radius) 0;font-family:var(--font-mono);font-size:11px;color:rgba(0,200,255,0.8);line-height:1.7;margin-bottom:1rem;"><strong style="display:block;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;color:var(--neon);">Day Tip</strong>${d.tip}</div>` : ''}
 
-      <button class="btn btn-neon" style="width:100%;justify-content:center;" onclick="document.getElementById('taskModal').remove()">Got it — let's draw</button>
+      <button id="gotItBtn" class="btn btn-neon" style="width:100%;justify-content:center;">Got it — let's draw</button>
     </div>`;
 
-  modal.addEventListener('click', e => { if(e.target === modal) modal.remove(); });
   document.body.appendChild(modal);
+
+  // Attach close listeners properly
+  document.getElementById('closeTaskBtn').addEventListener('click', ()=> modal.remove());
+  document.getElementById('gotItBtn').addEventListener('click', ()=> modal.remove());
+  modal.addEventListener('click', e => { if(e.target === modal) modal.remove(); });
 }
 const defaultTips = [
   { icon: '✏️', title: 'Warm up every session', body: 'Spend the first 10–15 minutes on loose gesture drawings or line drills before tackling your main focus. Cold hands = stiff lines.' },
