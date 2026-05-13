@@ -1179,27 +1179,6 @@ function renderWeek(){
     </div>`).join('');
 }
 
-function renderDetail(id){
-  const d=state.schedule[id];
-  const el=document.getElementById('dayDetail');
-  if(d.rest){el.innerHTML=`<p style="text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:12px;padding:2rem;">Rest day — your brain consolidates learning while you sleep.</p>`;return;}
-  el.innerHTML=`
-    <div class="detail-top">
-      <h2>${d.label} — ${d.focus}</h2>
-      <span class="focus-tag">${d.duration}</span>
-    </div>
-    <div class="sessions">
-      ${d.sessions.map(s=>`
-        <div class="session">
-          <div class="s-time">${s.time}</div>
-          <div><div class="s-name">${s.name}</div><div class="s-desc">${s.desc}</div></div>
-        </div>`).join('')}
-    </div>
-    ${d.tip?`<div class="tip-strip"><strong>Tip</strong>${d.tip}</div>`:''}`;
-}
-
-function selectDay(id){ activeDay=id; renderWeek(); renderDetail(id); }
-
 // ─── LOG ENTRIES ──────────────────────────────────────────────
 function saveEntry(){
   const focus=document.getElementById('entryFocus').value;
@@ -1524,7 +1503,436 @@ function renderReminders(){
     </div>`).join('');
 }
 
-// ─── TIPS & TRICKS ───────────────────────────────────────────
+function renderDetail(id){
+  const d=state.schedule[id];
+  const el=document.getElementById('dayDetail');
+  if(d.rest){
+    el.innerHTML=`<p style="text-align:center;color:var(--text3);font-family:var(--font-mono);font-size:12px;padding:2rem;">Rest day — your brain consolidates learning while you sleep.</p>`;
+    return;
+  }
+  el.innerHTML=`
+    <div class="detail-top">
+      <h2>${d.label} — ${d.focus}</h2>
+      <span class="focus-tag">${d.duration}</span>
+    </div>
+    <p style="font-family:var(--font-mono);font-size:10px;color:var(--neon);margin-bottom:1rem;letter-spacing:0.04em;opacity:0.7;">▶ CLICK ANY TASK FOR DETAILED INSTRUCTIONS &amp; DIAGRAMS</p>
+    <div class="sessions" id="sessionsContainer">
+      ${d.sessions.map((s,i)=>`
+        <div class="session task-clickable" data-day="${id}" data-session="${i}" style="cursor:pointer;border-radius:var(--radius);padding:12px 8px;transition:background 0.15s;">
+          <div class="s-time">${s.time}</div>
+          <div>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div class="s-name">${s.name}</div>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(0,200,255,0.6)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            </div>
+            <div class="s-desc">${s.desc}</div>
+          </div>
+        </div>`).join('')}
+    </div>
+    ${d.tip?`<div class="tip-strip"><strong>Tip</strong>${d.tip}</div>`:''}`;
+
+  // Attach click listeners after rendering
+  el.querySelectorAll('.task-clickable').forEach(div => {
+    div.addEventListener('mouseover', ()=>{ div.style.background='rgba(0,200,255,0.07)'; });
+    div.addEventListener('mouseout', ()=>{ div.style.background='none'; });
+    div.addEventListener('click', ()=>{
+      const dayId = parseInt(div.dataset.day);
+      const sessionIdx = parseInt(div.dataset.session);
+      openTaskDetail(dayId, sessionIdx);
+    });
+  });
+}
+
+function selectDay(id){ activeDay=id; renderWeek(); renderDetail(id); }
+
+// ─── TASK DETAIL DATABASE ─────────────────────────────────────
+const taskDetails = {
+  'Line drills': {
+    steps: ['Set a timer for 15 minutes.','Fill a page with horizontal lines from left to right — aim to make them perfectly straight without a ruler. Go slowly at first, then build speed.','Next row: do the same but vertical lines top to bottom.','Third row: diagonal lines at 45°, then the other diagonal.','Finally: draw smooth ellipses (flattened circles) of varying sizes. Aim for clean, confident strokes — no chicken scratching.','The goal is not perfection but control. Your wrist should stay loose, movement from the elbow.'],
+    diagram: drawLineDrillsDiagram
+  },
+  'Perspective practice': {
+    steps: ['Place a dot near the centre of your page — this is your vanishing point (VP).','Draw two lines from the VP going outward — these are your perspective guidelines.','Connect the ends of those lines with a vertical line — you now have a box face.','Add more lines from the VP through the top and bottom corners of that face to create a full 3D box.','Try 2-point perspective: two VPs on the horizon line, one left one right. Draw vertical lines between them, then run guidelines to both VPs.','Draw 5 different sized boxes from different angles on the same page.'],
+    diagram: drawPerspectiveDiagram
+  },
+  'Shape construction': {
+    steps: ['Pick a complex object — a chair, a shoe, a phone.','Before drawing details, identify the basic 3D shapes inside it: boxes, cylinders, spheres, cones.','Lightly sketch those basic shapes first in correct proportion and perspective.','Once the construction feels right, draw the actual object ON TOP of those shapes.','Erase the construction lines. The object should look solid and grounded.','Repeat with 3 different objects.'],
+    diagram: drawShapeConstructionDiagram
+  },
+  'Gesture drawing': {
+    steps: ['Go to line-of-action.com and set the timer to 30 seconds per pose.','Your goal is NOT to draw everything — just capture the flow of the body with a single curved line (the line of action).','Draw through the figure: imagine the spine as an S or C curve and exaggerate it slightly.','Add the ribcage as an egg shape, the pelvis as another egg, then limbs as simple tubes.','Do NOT draw outlines — draw through forms. Think sculptor not tracer.','After 10 quick poses, do 2 slower 2-minute poses applying the same principles.'],
+    diagram: drawGestureDiagram
+  },
+  'Anatomy deep-dive': {
+    steps: ['Choose one body region: this week focus on ARMS (then rotate to torso, legs, hands each following week).','Study a reference image of the muscles — look up "arm anatomy for artists".','Draw the skeleton of the arm first: humerus, radius, ulna as simple cylinders.','Add the major muscle groups as simplified forms on top: bicep, tricep, forearm muscles.','Draw the same arm from 3 different angles using this method.','Finally, draw from a photo reference applying your anatomy knowledge — try to see the muscles beneath the skin.'],
+    diagram: drawAnatomyDiagram
+  },
+  'Reference figure': {
+    steps: ['Find a full-body photo reference (line-of-action.com, unsplash, or a pose you photograph yourself).','Start with a gesture line — the single curve running through the whole pose.','Block in the head as an egg, ribcage as a larger egg, pelvis as a smaller egg.','Add limbs as cylinders — no hands or feet yet.','Check proportions: the body is roughly 7.5 heads tall. Check your figure against this.','Now add simplified details: hands, feet, clothing folds. Keep it structural, not decorative.'],
+    diagram: drawFigureDiagram
+  },
+  'Feature warm-up': {
+    steps: ['Set timer: 2 minutes per feature. Draw 3 eyes, 3 noses, 3 mouths, 2 ears.','For eyes: draw an almond shape, place the iris (coloured part) so it slightly overlaps the top lid, add a small highlight dot.','For noses: think of it as a ball on the end with two wing shapes. Draw the shadow shapes, not the outline.','For mouths: the top lip has an M-shape (cupid\'s bow), the bottom lip is a fuller D shape. The line between them is the darkest part.','For ears: C shape with an inner Y shape. The ear sits between the eyebrow line and nose line on the side of the head.','Vary the angles — draw some from 3/4 view, some from the side.'],
+    diagram: drawFeaturesDiagram
+  },
+  'Portrait from reference': {
+    steps: ['Find a clear photo reference with good lighting — not flat, frontal lighting.','Draw a vertical line (centre of face) and a horizontal line (eye line) on your page first.','Place the eyes ON the eye line, one eye-width apart, with one eye-width of space between them.','The nose bottom sits halfway between the eyes and chin. The mouth sits 1/3 of the way between nose and chin.','Block in these proportions BEFORE drawing any details. Check them carefully.','Add the major light and shadow shapes as flat tones — squint at your reference to simplify the values.','Only then add details: eyelashes, lip texture, hair. Details last, always.'],
+    diagram: drawPortraitDiagram
+  },
+  'Expression studies': {
+    steps: ['Draw the same face structure 4 times (use your proportion method from the portrait exercise).','Expression 1 — HAPPY: eyebrows raise slightly, eyes narrow from cheeks pushing up, mouth corners pull up and back, cheeks round.','Expression 2 — ANGRY: eyebrows pull inward and down (creating a V shape), eyes narrow, mouth tightens or opens with tension.','Expression 3 — SAD: inner corners of eyebrows raise (this is the hardest movement to fake), eyes may water or droop, mouth corners pull down.','Expression 4 — SURPRISED: eyebrows shoot up fully, eyes open wide showing white above iris, mouth drops open.','Key rule: expressions come from MUSCLE MOVEMENT, not just line changes. Think about what the muscles are actually doing.'],
+    diagram: drawExpressionDiagram
+  },
+  'Value scales': {
+    steps: ['Draw a row of 5 equal boxes on your page.','Box 1: leave completely white. Box 5: fill as dark as your pencil/brush goes. Box 3: fill with a medium grey.','Now fill Box 2 halfway between white and medium grey. Fill Box 4 halfway between medium grey and black.','You now have a 5-step value scale — this is your reference for the whole session.','Repeat with colour: pick any colour and create a scale from its lightest tint (add white) to its darkest shade (add black).','Tape this scale to the corner of your page as reference while you shade.'],
+    diagram: drawValueScaleDiagram
+  },
+  'Shading from reference': {
+    steps: ['Pick a simple object with one strong light source — a mug, an apple, a ball.','Squint at it hard. Squinting removes detail and shows you only the big value shapes.','Identify: the LIGHT (brightest area directly hit by light), SHADOW (area not hit by light), CORE SHADOW (the darkest edge between light and shadow), REFLECTED LIGHT (subtle light bouncing back into the shadow from nearby surfaces).','Draw the object lightly. Fill the entire shadow area with a flat mid-tone first.','Darken the core shadow. Leave the light area white. Add a slightly lighter tone to the reflected light area within shadow.','Add any cast shadow on the surface below the object — this grounds it.'],
+    diagram: drawShadingDiagram
+  },
+  '3-colour study': {
+    steps: ['Choose your 3 colours before you start: ideally one warm (e.g. orange), one cool (e.g. blue), one neutral (e.g. yellow-green). Plus black and white.','Pick a simple subject: a piece of fruit, a view from your window, a simple still life.','Mix your lightest lights first (colour + lots of white). Block in the largest light areas.','Mix your mid-tones (colour + small amount of complementary colour to neutralise it slightly).','Mix your darkest darks (colour + black, or mix the two colours together).','The 3-colour limit forces you to make decisions about colour temperature and harmony rather than just copying colours literally.'],
+    diagram: drawColourStudyDiagram
+  },
+  'Free sketching': {
+    steps: ['Set a timer for 20 minutes. No reference, no goals, no judging.','Start by drawing whatever comes to mind — a character, a place, an object, a scene.','If you get stuck, pick a random word (animal, vehicle, emotion) and draw your interpretation of it.','Don\'t erase — keep moving forward. Bad drawings are part of the process.','Try exaggerating proportions or styles beyond what feels natural to you.','This session is about play, not practice. Quantity over quality.'],
+    diagram: null
+  },
+  'Illustration project': {
+    steps: ['Work on a personal piece in your own style — character design, scene, creature, concept art.','Start with THUMBNAILS: draw 4-6 tiny rough compositions (size of a postage stamp) to find the best layout before committing.','Once you pick a thumbnail, do a slightly larger rough sketch establishing the main elements.','Block in flat colours or tones to establish your colour/value plan before rendering.','Work from big shapes to small details — don\'t detail one area while the rest is unfinished.','This is YOUR work — prioritise your voice and interests over technical perfection.'],
+    diagram: drawThumbnailDiagram
+  },
+  'Artist study': {
+    steps: ['Pick one artist whose work you admire. Look at 10-15 of their pieces carefully.','Analyse: What LINE WEIGHT do they use? Thick outlines? Thin and delicate? Varied?','Analyse: What SHAPES appear in their work? Boxy and angular? Soft and round? Exaggerated?','Analyse: What COLOUR PALETTE do they favour? Warm or cool? Muted or saturated? Limited or varied?','Analyse: What MOOD does their work have and how do they achieve it?','Now do ONE study: pick one of their simpler pieces and recreate it in their style — not tracing, but replicating their decisions.'],
+    diagram: null
+  }
+};
+
+// Diagrams as SVGs
+function drawLineDrillsDiagram(){
+  return `<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;border-radius:6px;">
+    <rect width="320" height="180" fill="#0f0f0f"/>
+    <text x="12" y="20" fill="#444" font-family="JetBrains Mono" font-size="9" letter-spacing="2">LINE DRILLS</text>
+    ${Array.from({length:6},(_,i)=>`<line x1="16" y1="${35+i*12}" x2="${280+Math.random()*10-5}" y2="${35+i*12}" stroke="#00c8ff" stroke-width="${0.8+i*0.1}" opacity="${0.4+i*0.1}"/>`).join('')}
+    ${Array.from({length:5},(_,i)=>`<line x1="${160+i*18}" y1="30" x2="${160+i*18}" y2="105" stroke="#00c8ff" stroke-width="0.8" opacity="0.5"/>`).join('')}
+    ${Array.from({length:4},(_,i)=>`<line x1="${16+i*20}" y1="115" x2="${50+i*20}" y2="145" stroke="#00c8ff" stroke-width="0.8" opacity="0.5"/>`).join('')}
+    <ellipse cx="80" cy="158" rx="30" ry="12" fill="none" stroke="#00c8ff" stroke-width="1" opacity="0.7"/>
+    <ellipse cx="160" cy="158" rx="20" ry="8" fill="none" stroke="#00c8ff" stroke-width="1" opacity="0.7"/>
+    <ellipse cx="230" cy="158" rx="40" ry="15" fill="none" stroke="#00c8ff" stroke-width="1" opacity="0.5"/>
+    <text x="16" y="175" fill="#444" font-family="JetBrains Mono" font-size="8">horizontal → vertical → diagonal → ellipses</text>
+  </svg>`;
+}
+
+function drawPerspectiveDiagram(){
+  return `<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;border-radius:6px;">
+    <rect width="320" height="180" fill="#0f0f0f"/>
+    <text x="12" y="16" fill="#444" font-family="JetBrains Mono" font-size="9" letter-spacing="2">1-POINT PERSPECTIVE</text>
+    <line x1="0" y1="80" x2="320" y2="80" stroke="#222" stroke-width="1" stroke-dasharray="4,4"/>
+    <circle cx="160" cy="80" r="4" fill="#00c8ff" opacity="0.8"/>
+    <text x="165" y="76" fill="#00c8ff" font-family="JetBrains Mono" font-size="8">VP</text>
+    <line x1="160" y1="80" x2="40" y2="160" stroke="#00c8ff" stroke-width="0.8" opacity="0.4"/>
+    <line x1="160" y1="80" x2="100" y2="160" stroke="#00c8ff" stroke-width="0.8" opacity="0.4"/>
+    <line x1="160" y1="80" x2="220" y2="160" stroke="#00c8ff" stroke-width="0.8" opacity="0.4"/>
+    <line x1="160" y1="80" x2="280" y2="160" stroke="#00c8ff" stroke-width="0.8" opacity="0.4"/>
+    <line x1="160" y1="80" x2="60" y2="30" stroke="#00c8ff" stroke-width="0.8" opacity="0.4"/>
+    <line x1="160" y1="80" x2="260" y2="30" stroke="#00c8ff" stroke-width="0.8" opacity="0.4"/>
+    <rect x="100" y="95" width="60" height="50" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
+    <line x1="100" y1="95" x2="80" y2="75" stroke="#fff" stroke-width="1" opacity="0.5"/>
+    <line x1="160" y1="95" x2="140" y2="75" stroke="#fff" stroke-width="1" opacity="0.5"/>
+    <line x1="80" y1="75" x2="140" y2="75" stroke="#fff" stroke-width="1" opacity="0.5"/>
+    <text x="12" y="175" fill="#444" font-family="JetBrains Mono" font-size="8">all lines converge to the vanishing point</text>
+  </svg>`;
+}
+
+function drawShapeConstructionDiagram(){
+  return `<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;border-radius:6px;">
+    <rect width="320" height="180" fill="#0f0f0f"/>
+    <text x="12" y="16" fill="#444" font-family="JetBrains Mono" font-size="9" letter-spacing="2">SHAPE CONSTRUCTION</text>
+    <rect x="20" y="30" width="60" height="45" fill="none" stroke="#00c8ff" stroke-width="1" stroke-dasharray="3,3" opacity="0.6"/>
+    <ellipse cx="50" cy="105" rx="22" ry="28" fill="none" stroke="#00c8ff" stroke-width="1" stroke-dasharray="3,3" opacity="0.6"/>
+    <rect x="90" y="55" width="25" height="50" fill="none" stroke="#00c8ff" stroke-width="1" stroke-dasharray="3,3" opacity="0.6"/>
+    <text x="12" y="148" fill="#444" font-family="JetBrains Mono" font-size="8">basic shapes →</text>
+    <rect x="175" y="30" width="60" height="45" rx="3" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.8"/>
+    <ellipse cx="205" cy="105" rx="22" ry="28" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.8"/>
+    <rect x="245" y="55" width="25" height="50" rx="2" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.8"/>
+    <text x="170" y="148" fill="#444" font-family="JetBrains Mono" font-size="8">→ refined object on top</text>
+    <line x1="155" y1="80" x2="170" y2="80" stroke="#00c8ff" stroke-width="1.5" marker-end="url(#arr)"/>
+    <defs><marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#00c8ff"/></marker></defs>
+    <text x="80" y="170" fill="#444" font-family="JetBrains Mono" font-size="8">box · cylinder · sphere → complex form</text>
+  </svg>`;
+}
+
+function drawGestureDiagram(){
+  return `<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;border-radius:6px;">
+    <rect width="320" height="180" fill="#0f0f0f"/>
+    <text x="12" y="16" fill="#444" font-family="JetBrains Mono" font-size="9" letter-spacing="2">GESTURE — LINE OF ACTION</text>
+    <path d="M80,25 Q90,60 75,100 Q65,130 80,160" fill="none" stroke="#00c8ff" stroke-width="2.5" opacity="0.9"/>
+    <text x="88" y="95" fill="#00c8ff" font-family="JetBrains Mono" font-size="8">line of action</text>
+    <ellipse cx="80" cy="35" rx="12" ry="15" fill="none" stroke="#fff" stroke-width="1" opacity="0.5"/>
+    <ellipse cx="78" cy="70" rx="16" ry="20" fill="none" stroke="#fff" stroke-width="1" opacity="0.5"/>
+    <ellipse cx="76" cy="105" rx="13" ry="15" fill="none" stroke="#fff" stroke-width="1" opacity="0.5"/>
+    <line x1="78" y1="90" x2="50" y2="115" stroke="#fff" stroke-width="1" opacity="0.4"/>
+    <line x1="78" y1="90" x2="108" y2="112" stroke="#fff" stroke-width="1" opacity="0.4"/>
+    <line x1="76" y1="120" x2="60" y2="158" stroke="#fff" stroke-width="1" opacity="0.4"/>
+    <line x1="76" y1="120" x2="92" y2="158" stroke="#fff" stroke-width="1" opacity="0.4"/>
+    <text x="150" y="50" fill="#888" font-family="JetBrains Mono" font-size="9">✓ C or S curve spine</text>
+    <text x="150" y="70" fill="#888" font-family="JetBrains Mono" font-size="9">✓ egg for ribcage</text>
+    <text x="150" y="90" fill="#888" font-family="JetBrains Mono" font-size="9">✓ egg for pelvis</text>
+    <text x="150" y="110" fill="#888" font-family="JetBrains Mono" font-size="9">✓ tubes for limbs</text>
+    <text x="150" y="130" fill="#ff4444" font-family="JetBrains Mono" font-size="9">✗ no outlines</text>
+    <text x="150" y="150" fill="#ff4444" font-family="JetBrains Mono" font-size="9">✗ no details</text>
+  </svg>`;
+}
+
+function drawAnatomyDiagram(){
+  return `<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;border-radius:6px;">
+    <rect width="320" height="180" fill="#0f0f0f"/>
+    <text x="12" y="16" fill="#444" font-family="JetBrains Mono" font-size="9" letter-spacing="2">ARM ANATOMY (simplified)</text>
+    <line x1="80" y1="30" x2="80" y2="90" stroke="#444" stroke-width="8" stroke-linecap="round" opacity="0.6"/>
+    <line x1="80" y1="90" x2="65" y2="155" stroke="#444" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
+    <line x1="80" y1="90" x2="95" y2="155" stroke="#444" stroke-width="5" stroke-linecap="round" opacity="0.5"/>
+    <text x="95" y="60" fill="#444" font-family="JetBrains Mono" font-size="8">humerus</text>
+    <text x="95" y="125" fill="#444" font-family="JetBrains Mono" font-size="8">radius / ulna</text>
+    <ellipse cx="80" cy="58" rx="18" ry="25" fill="none" stroke="#00c8ff" stroke-width="1.5" opacity="0.7"/>
+    <text x="102" y="55" fill="#00c8ff" font-family="JetBrains Mono" font-size="8">bicep</text>
+    <path d="M62,55 Q55,75 62,90" fill="none" stroke="#a855f7" stroke-width="2" opacity="0.7"/>
+    <text x="35" y="75" fill="#a855f7" font-family="JetBrains Mono" font-size="8">tricep</text>
+    <text x="160" y="40" fill="#888" font-family="JetBrains Mono" font-size="9">STUDY ORDER:</text>
+    <text x="160" y="58" fill="#00c8ff" font-family="JetBrains Mono" font-size="9">Week 1 → Arms</text>
+    <text x="160" y="76" fill="#888" font-family="JetBrains Mono" font-size="9">Week 2 → Torso</text>
+    <text x="160" y="94" fill="#888" font-family="JetBrains Mono" font-size="9">Week 3 → Legs</text>
+    <text x="160" y="112" fill="#888" font-family="JetBrains Mono" font-size="9">Week 4 → Hands</text>
+    <text x="160" y="130" fill="#888" font-family="JetBrains Mono" font-size="9">Week 5 → Full figure</text>
+    <text x="12" y="173" fill="#444" font-family="JetBrains Mono" font-size="8">skeleton first → muscles on top → skin last</text>
+  </svg>`;
+}
+
+function drawFigureDiagram(){
+  return `<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;border-radius:6px;">
+    <rect width="320" height="180" fill="#0f0f0f"/>
+    <text x="12" y="16" fill="#444" font-family="JetBrains Mono" font-size="9" letter-spacing="2">FIGURE PROPORTIONS (7.5 heads)</text>
+    ${Array.from({length:8},(_,i)=>`
+      <rect x="55" y="${18+i*18}" width="30" height="16" rx="2" fill="none" stroke="${i===0?'#00c8ff':'#333'}" stroke-width="${i===0?1.5:0.8}" opacity="0.7"/>
+      <text x="92" y="${30+i*18}" fill="#444" font-family="JetBrains Mono" font-size="8">${['Head','Chin→Chest','Chest→Navel','Navel→Crotch','Crotch→Mid thigh','Mid thigh→Knee','Knee→Mid shin','Mid shin→Floor'][i]}</text>
+    `).join('')}
+    <text x="12" y="170" fill="#00c8ff" font-family="JetBrains Mono" font-size="8">eyes sit at the MID-POINT of the head height</text>
+  </svg>`;
+}
+
+function drawFeaturesDiagram(){
+  return `<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;border-radius:6px;">
+    <rect width="320" height="180" fill="#0f0f0f"/>
+    <text x="12" y="16" fill="#444" font-family="JetBrains Mono" font-size="9" letter-spacing="2">FACIAL FEATURES</text>
+    <path d="M30,50 Q40,42 55,48 Q65,42 75,50 Q65,62 52,62 Q40,62 30,50Z" fill="none" stroke="#fff" stroke-width="1.2" opacity="0.8"/>
+    <circle cx="52" cy="52" r="7" fill="none" stroke="#00c8ff" stroke-width="1" opacity="0.7"/>
+    <circle cx="52" cy="52" r="3" fill="#00c8ff" opacity="0.4"/>
+    <circle cx="55" cy="49" r="1.5" fill="#fff" opacity="0.8"/>
+    <text x="30" y="75" fill="#444" font-family="JetBrains Mono" font-size="8">eye</text>
+    <path d="M120,45 Q130,40 140,45 Q143,55 130,65 Q117,55 120,45Z" fill="none" stroke="#fff" stroke-width="1.2" opacity="0.7"/>
+    <circle cx="130" cy="58" r="5" fill="none" stroke="#00c8ff" stroke-width="0.8" opacity="0.5"/>
+    <text x="118" y="75" fill="#444" font-family="JetBrains Mono" font-size="8">nose</text>
+    <path d="M200,48 Q215,44 230,48" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
+    <path d="M200,48 Q215,60 230,48" fill="none" stroke="#fff" stroke-width="1" opacity="0.5"/>
+    <text x="198" y="75" fill="#444" font-family="JetBrains Mono" font-size="8">mouth</text>
+    <path d="M275,35 Q295,35 298,55 Q295,75 275,78 Q268,65 270,55 Q268,42 275,35Z" fill="none" stroke="#fff" stroke-width="1.2" opacity="0.7"/>
+    <path d="M278,42 Q285,48 282,60" fill="none" stroke="#00c8ff" stroke-width="1" opacity="0.5"/>
+    <text x="268" y="90" fill="#444" font-family="JetBrains Mono" font-size="8">ear</text>
+    <line x1="0" y1="100" x2="320" y2="100" stroke="#222" stroke-width="0.5"/>
+    <text x="12" y="115" fill="#888" font-family="JetBrains Mono" font-size="8">FACE PLACEMENT GUIDE:</text>
+    <rect x="12" y="122" width="296" height="50" rx="3" fill="#0f0f0f" stroke="#222" stroke-width="1"/>
+    <line x1="160" y1="122" x2="160" y2="172" stroke="#00c8ff" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.5"/>
+    <line x1="12" y1="135" x2="308" y2="135" stroke="#333" stroke-width="0.8"/>
+    <line x1="12" y1="150" x2="308" y2="150" stroke="#333" stroke-width="0.8"/>
+    <line x1="12" y1="162" x2="308" y2="162" stroke="#333" stroke-width="0.8"/>
+    <text x="16" y="133" fill="#00c8ff" font-family="JetBrains Mono" font-size="7">← eyes on halfway line →</text>
+    <text x="16" y="148" fill="#888" font-family="JetBrains Mono" font-size="7">← nose = halfway: eyes to chin</text>
+    <text x="16" y="160" fill="#888" font-family="JetBrains Mono" font-size="7">← mouth = 1/3: nose to chin</text>
+    <text x="16" y="171" fill="#888" font-family="JetBrains Mono" font-size="7">← ear = eyebrow to nose line</text>
+  </svg>`;
+}
+
+function drawPortraitDiagram(){
+  return `<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;border-radius:6px;">
+    <rect width="320" height="180" fill="#0f0f0f"/>
+    <text x="12" y="16" fill="#444" font-family="JetBrains Mono" font-size="9" letter-spacing="2">PORTRAIT CONSTRUCTION</text>
+    <ellipse cx="100" cy="100" rx="55" ry="70" fill="none" stroke="#333" stroke-width="1"/>
+    <line x1="100" y1="30" x2="100" y2="170" stroke="#00c8ff" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.5"/>
+    <line x1="45" y1="95" x2="155" y2="95" stroke="#00c8ff" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.5"/>
+    <line x1="45" y1="125" x2="155" y2="125" stroke="#333" stroke-width="0.8" stroke-dasharray="2,2"/>
+    <line x1="45" y1="140" x2="155" y2="140" stroke="#333" stroke-width="0.8" stroke-dasharray="2,2"/>
+    <circle cx="85" cy="95" r="8" fill="none" stroke="#fff" stroke-width="1" opacity="0.6"/>
+    <circle cx="115" cy="95" r="8" fill="none" stroke="#fff" stroke-width="1" opacity="0.6"/>
+    <path d="M88,125 Q100,120 112,125" fill="none" stroke="#fff" stroke-width="1" opacity="0.5"/>
+    <text x="168" y="35" fill="#00c8ff" font-family="JetBrains Mono" font-size="8">eye line (halfway)</text>
+    <text x="168" y="98" fill="#444" font-family="JetBrains Mono" font-size="8">↑ eye line</text>
+    <text x="168" y="128" fill="#444" font-family="JetBrains Mono" font-size="8">↑ nose bottom</text>
+    <text x="168" y="143" fill="#444" font-family="JetBrains Mono" font-size="8">↑ mouth</text>
+    <text x="168" y="165" fill="#444" font-family="JetBrains Mono" font-size="8">↑ chin</text>
+    <text x="12" y="175" fill="#00c8ff" font-family="JetBrains Mono" font-size="8">proportions FIRST — details always last</text>
+  </svg>`;
+}
+
+function drawExpressionDiagram(){
+  return `<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;border-radius:6px;">
+    <rect width="320" height="180" fill="#0f0f0f"/>
+    <text x="12" y="14" fill="#444" font-family="JetBrains Mono" font-size="9" letter-spacing="2">EXPRESSIONS — KEY MUSCLE MOVEMENTS</text>
+    <ellipse cx="45" cy="85" rx="32" ry="38" fill="none" stroke="#333" stroke-width="1"/>
+    <path d="M30,75 Q45,70 60,75" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
+    <path d="M32,85 Q45,82 58,85" fill="none" stroke="#fff" stroke-width="1" opacity="0.5"/>
+    <path d="M34,100 Q45,108 56,100" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
+    <text x="20" y="135" fill="#00e676" font-family="JetBrains Mono" font-size="8">HAPPY</text>
+    <ellipse cx="125" cy="85" rx="32" ry="38" fill="none" stroke="#333" stroke-width="1"/>
+    <path d="M110,72 Q118,80 125,73" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
+    <path d="M125,73 Q132,80 140,72" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
+    <path d="M112,88 Q125,84 138,88" fill="none" stroke="#fff" stroke-width="1" opacity="0.5"/>
+    <path d="M115,102 Q125,97 135,102" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
+    <text x="108" y="135" fill="#ff4444" font-family="JetBrains Mono" font-size="8">ANGRY</text>
+    <ellipse cx="205" cy="85" rx="32" ry="38" fill="none" stroke="#333" stroke-width="1"/>
+    <path d="M190,80 Q198,74 205,78" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
+    <path d="M205,78 Q212,74 220,80" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
+    <path d="M193,90 Q205,86 217,90" fill="none" stroke="#fff" stroke-width="1" opacity="0.5"/>
+    <path d="M193,103 Q205,108 217,103" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
+    <text x="193" y="135" fill="#ffc107" font-family="JetBrains Mono" font-size="8">SAD</text>
+    <ellipse cx="285" cy="85" rx="32" ry="38" fill="none" stroke="#333" stroke-width="1"/>
+    <path d="M270,68 Q285,63 300,68" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
+    <circle cx="278" cy="82" r="7" fill="none" stroke="#fff" stroke-width="1" opacity="0.6"/>
+    <circle cx="292" cy="82" r="7" fill="none" stroke="#fff" stroke-width="1" opacity="0.6"/>
+    <ellipse cx="285" cy="103" rx="10" ry="7" fill="none" stroke="#fff" stroke-width="1.5" opacity="0.7"/>
+    <text x="265" y="135" fill="#a855f7" font-family="JetBrains Mono" font-size="8">SURPRISED</text>
+    <text x="12" y="160" fill="#444" font-family="JetBrains Mono" font-size="8">brows up=happy/surprised · brows in+down=angry · inner brows up=sad</text>
+  </svg>`;
+}
+
+function drawValueScaleDiagram(){
+  return `<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;border-radius:6px;">
+    <rect width="320" height="180" fill="#0f0f0f"/>
+    <text x="12" y="16" fill="#444" font-family="JetBrains Mono" font-size="9" letter-spacing="2">VALUE SCALE</text>
+    ${[0,1,2,3,4].map(i=>`
+      <rect x="${16+i*58}" y="30" width="50" height="50" rx="3" fill="hsl(0,0%,${100-i*22}%)" stroke="#333" stroke-width="1"/>
+      <text x="${16+i*58+8}" y="100" fill="#666" font-family="JetBrains Mono" font-size="8">${['White','Light','Mid','Dark','Black'][i]}</text>
+    `).join('')}
+    <text x="12" y="125" fill="#888" font-family="JetBrains Mono" font-size="8">LIGHT FAMILIES ON ANY OBJECT:</text>
+    <rect x="12" y="133" width="60" height="35" rx="3" fill="#ddd"/>
+    <text x="16" y="158" fill="#000" font-family="JetBrains Mono" font-size="7">LIGHT</text>
+    <rect x="80" y="133" width="60" height="35" rx="3" fill="#888"/>
+    <text x="84" y="158" fill="#fff" font-family="JetBrains Mono" font-size="7">MID</text>
+    <rect x="148" y="133" width="60" height="35" rx="3" fill="#333"/>
+    <text x="152" y="158" fill="#fff" font-family="JetBrains Mono" font-size="7">SHADOW</text>
+    <rect x="216" y="133" width="60" height="35" rx="3" fill="#111"/>
+    <text x="220" y="158" fill="#fff" font-family="JetBrains Mono" font-size="7">CORE SHD</text>
+  </svg>`;
+}
+
+function drawShadingDiagram(){
+  return `<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;border-radius:6px;">
+    <rect width="320" height="180" fill="#0f0f0f"/>
+    <text x="12" y="16" fill="#444" font-family="JetBrains Mono" font-size="9" letter-spacing="2">SHADING — LIGHT FAMILIES</text>
+    <circle cx="120" cy="90" r="65" fill="#555"/>
+    <circle cx="120" cy="90" r="65" fill="url(#lightGrad)"/>
+    <defs>
+      <radialGradient id="lightGrad" cx="35%" cy="35%">
+        <stop offset="0%" stop-color="#eee"/>
+        <stop offset="40%" stop-color="#999"/>
+        <stop offset="70%" stop-color="#333"/>
+        <stop offset="85%" stop-color="#111"/>
+        <stop offset="100%" stop-color="#2a2a2a"/>
+      </radialGradient>
+    </defs>
+    <ellipse cx="120" cy="158" rx="50" ry="10" fill="#111" opacity="0.8"/>
+    <text x="215" y="35" fill="#eee" font-family="JetBrains Mono" font-size="8">← HIGHLIGHT</text>
+    <text x="215" y="60" fill="#999" font-family="JetBrains Mono" font-size="8">← LIGHT</text>
+    <text x="215" y="88" fill="#666" font-family="JetBrains Mono" font-size="8">← SHADOW</text>
+    <text x="215" y="110" fill="#444" font-family="JetBrains Mono" font-size="8">← CORE SHD</text>
+    <text x="215" y="132" fill="#555" font-family="JetBrains Mono" font-size="8">← REFL LIGHT</text>
+    <text x="215" y="158" fill="#333" font-family="JetBrains Mono" font-size="8">← CAST SHD</text>
+    <line x1="60" y1="25" x2="45" y2="35" stroke="#ffc107" stroke-width="1.5" opacity="0.8"/>
+    <circle cx="55" cy="22" r="6" fill="#ffc107" opacity="0.7"/>
+    <text x="12" y="172" fill="#00c8ff" font-family="JetBrains Mono" font-size="8">squint at reference — it simplifies values</text>
+  </svg>`;
+}
+
+function drawColourStudyDiagram(){
+  return `<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;border-radius:6px;">
+    <rect width="320" height="180" fill="#0f0f0f"/>
+    <text x="12" y="16" fill="#444" font-family="JetBrains Mono" font-size="9" letter-spacing="2">3-COLOUR PALETTE</text>
+    <circle cx="80" cy="80" r="35" fill="#e8630a" opacity="0.85"/>
+    <text x="62" y="85" fill="#fff" font-family="JetBrains Mono" font-size="8" font-weight="bold">WARM</text>
+    <circle cx="160" cy="80" r="35" fill="#1a6bbf" opacity="0.85"/>
+    <text x="145" y="85" fill="#fff" font-family="JetBrains Mono" font-size="8" font-weight="bold">COOL</text>
+    <circle cx="240" cy="80" r="35" fill="#7ab826" opacity="0.85"/>
+    <text x="222" y="85" fill="#fff" font-family="JetBrains Mono" font-size="8" font-weight="bold">NEUTRAL</text>
+    <text x="12" y="135" fill="#888" font-family="JetBrains Mono" font-size="8">mix warm+cool = neutralised mid-tone</text>
+    <text x="12" y="150" fill="#888" font-family="JetBrains Mono" font-size="8">add white = tint (lighter)  add black = shade (darker)</text>
+    <text x="12" y="168" fill="#00c8ff" font-family="JetBrains Mono" font-size="8">constraint forces better colour decisions than full palette</text>
+  </svg>`;
+}
+
+function drawThumbnailDiagram(){
+  return `<svg viewBox="0 0 320 180" xmlns="http://www.w3.org/2000/svg" style="width:100%;border-radius:6px;">
+    <rect width="320" height="180" fill="#0f0f0f"/>
+    <text x="12" y="16" fill="#444" font-family="JetBrains Mono" font-size="9" letter-spacing="2">THUMBNAILING PROCESS</text>
+    ${[0,1,2,3,4,5].map(i=>`
+      <rect x="${16+(i%3)*90}" y="${25+Math.floor(i/3)*75}" width="70" height="55" rx="3" fill="#161616" stroke="${i===2?'#00c8ff':'#222'}" stroke-width="${i===2?1.5:0.8}"/>
+      ${i===2?`<text x="${16+(i%3)*90+5}" y="${25+Math.floor(i/3)*75+68}" fill="#00c8ff" font-family="JetBrains Mono" font-size="7">✓ chosen</text>`:''}
+    `).join('')}
+    <text x="12" y="170" fill="#888" font-family="JetBrains Mono" font-size="8">6 thumbnails → pick best → develop into final piece</text>
+  </svg>`;
+}
+
+// Generic fallback diagram
+function drawGenericDiagram(name){
+  return `<svg viewBox="0 0 320 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;border-radius:6px;">
+    <rect width="320" height="100" fill="#0f0f0f" stroke="#222" stroke-width="1" rx="6"/>
+    <text x="160" y="45" fill="#444" font-family="JetBrains Mono" font-size="11" text-anchor="middle">${name}</text>
+    <text x="160" y="65" fill="#333" font-family="JetBrains Mono" font-size="9" text-anchor="middle">follow the steps above</text>
+  </svg>`;
+}
+
+// Task detail modal
+function openTaskDetail(dayId, sessionIdx){
+  const d = state.schedule[parseInt(dayId)];
+  const s = d.sessions[parseInt(sessionIdx)];
+  const detail = taskDetails[s.name];
+
+  const steps = detail ? detail.steps : [s.desc, 'Follow the general description above and apply it to your current skill level.', 'Take your time and focus on understanding, not just completion.'];
+  const diagram = detail && detail.diagram ? detail.diagram() : drawGenericDiagram(s.name);
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.id = 'taskModal';
+  modal.style.zIndex = '400';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:640px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;">
+        <div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">${d.label} · ${s.time}</div>
+          <h2 style="font-size:1.2rem;font-weight:800;letter-spacing:-0.03em;">${s.name}</h2>
+        </div>
+        <button onclick="document.getElementById('taskModal').remove()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:20px;line-height:1;padding:4px;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--text3)'">×</button>
+      </div>
+
+      <div style="margin-bottom:1.25rem;">${diagram}</div>
+
+      <div style="margin-bottom:1.25rem;">
+        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:0.75rem;padding-bottom:6px;border-bottom:1px solid var(--border);">Step-by-step instructions</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          ${steps.map((step,i)=>`
+            <div style="display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:flex-start;">
+              <div style="width:24px;height:24px;border-radius:50%;background:var(--neon-dim);border:1px solid rgba(0,200,255,0.3);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:10px;color:var(--neon);flex-shrink:0;">${i+1}</div>
+              <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.7;padding-top:3px;">${step}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+
+      ${s.desc ? `<div style="background:rgba(0,200,255,0.06);border-left:2px solid var(--neon);padding:0.75rem 1rem;border-radius:0 var(--radius) var(--radius) 0;font-family:var(--font-mono);font-size:11px;color:rgba(0,200,255,0.8);line-height:1.7;margin-bottom:1rem;"><strong style="display:block;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;color:var(--neon);">Summary</strong>${s.desc}</div>` : ''}
+
+      <button class="btn btn-neon" style="width:100%;justify-content:center;" onclick="document.getElementById('taskModal').remove()">Got it — let's draw</button>
+    </div>`;
+
+  modal.addEventListener('click', e => { if(e.target === modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
 const defaultTips = [
   { icon: '✏️', title: 'Warm up every session', body: 'Spend the first 10–15 minutes on loose gesture drawings or line drills before tackling your main focus. Cold hands = stiff lines.' },
   { icon: '👁️', title: 'Draw what you see, not what you think', body: 'Your brain fills in details that aren\'t there. Slow down and actually look at your reference — compare angles, proportions, and negative space.' },
