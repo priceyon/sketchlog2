@@ -1893,35 +1893,53 @@ function drawGenericDiagram(name){
 function openTaskDetail(dayId, sessionIdx){
   const d = state.schedule[parseInt(dayId)];
   const s = d.sessions[parseInt(sessionIdx)];
+  const name = s.name.toLowerCase();
 
-  // Try exact match first, then partial match on task name
-  let detail = taskDetails[s.name];
-  if(!detail){
-    const key = Object.keys(taskDetails).find(k => s.name.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(s.name.toLowerCase()));
-    if(key) detail = taskDetails[key];
+  // STEP 1: Use AI-generated steps if present in the session
+  let steps = (s.steps && s.steps.length > 0) ? s.steps : null;
+
+  // STEP 2: Fall back to built-in database
+  if(!steps){
+    let detail = taskDetails[s.name];
+    if(!detail){
+      const key = Object.keys(taskDetails).find(k =>
+        name.includes(k.toLowerCase().split(' ')[0]) ||
+        k.toLowerCase().includes(name.split(' ')[0])
+      );
+      if(key) detail = taskDetails[key];
+    }
+    if(detail) steps = detail.steps;
   }
 
-  // Build steps — use built-in if available, otherwise parse the description into steps
-  let steps;
-  if(detail && detail.steps){
-    steps = detail.steps;
-  } else {
-    // Break the AI description into meaningful steps
-    const base = s.desc || '';
-    const sentences = base.split(/(?<=[.!?])\s+/).filter(s=>s.trim().length>0);
-    steps = sentences.length > 1 ? sentences : [base];
-    // Add standard practice steps
+  // STEP 3: Generate steps from description if still nothing
+  if(!steps){
+    const sentences = (s.desc||'').split(/(?<=[.!?])\s+/).filter(x=>x.trim().length>0);
     steps = [
-      `Set up your workspace and gather reference material relevant to: ${s.name}.`,
-      ...steps,
-      `Spend the full allocated time (${s.time}) on this exercise — resist the urge to move on early.`,
-      `At the end, take a photo and log it in your Practice Log with notes on what felt difficult.`
+      `Get your sketchbook and a pencil. Set a timer for ${s.time} and remove distractions.`,
+      ...(sentences.length > 1 ? sentences : [s.desc || 'Follow the task description.']),
+      `Work slowly — understanding what you are doing matters more than how fast you finish.`,
+      `When done, photograph your work and add it to the Practice Log with a note about what felt hard.`
     ];
   }
 
-  const diagram = detail && detail.diagram ? detail.diagram() : drawGenericDiagram(s.name);
+  // DIAGRAM: keyword match to the right diagram function
+  let diagram;
+  if(name.includes('line') || name.includes('drill') || name.includes('stroke')) diagram = drawLineDrillsDiagram();
+  else if(name.includes('perspect') || name.includes('vanish')) diagram = drawPerspectiveDiagram();
+  else if(name.includes('shape') || name.includes('construct') || name.includes('form') || name.includes('3d') || name.includes('solid')) diagram = drawShapeConstructionDiagram();
+  else if(name.includes('gesture') || name.includes('action') || name.includes('quick pose') || name.includes('30 sec') || name.includes('2 min')) diagram = drawGestureDiagram();
+  else if(name.includes('anatomy') || name.includes('muscle') || name.includes('skeletal') || name.includes('anatomic')) diagram = drawAnatomyDiagram();
+  else if(name.includes('figure') || name.includes('full body') || name.includes('pose') || name.includes('body')) diagram = drawFigureDiagram();
+  else if(name.includes('feature') || name.includes('eye') || name.includes('nose') || name.includes('ear') || name.includes('mouth') || name.includes('lip')) diagram = drawFeaturesDiagram();
+  else if(name.includes('portrait') || name.includes('face') || name.includes('head') || name.includes('likeness')) diagram = drawPortraitDiagram();
+  else if(name.includes('expression') || name.includes('emotion') || name.includes('mood')) diagram = drawExpressionDiagram();
+  else if(name.includes('value') || name.includes('scale') || name.includes('grey') || name.includes('gray') || name.includes('tone')) diagram = drawValueScaleDiagram();
+  else if(name.includes('shad') || name.includes('light') || name.includes('render') || name.includes('sphere') || name.includes('cylinder')) diagram = drawShadingDiagram();
+  else if(name.includes('colour') || name.includes('color') || name.includes('palette') || name.includes('hue') || name.includes('pigment') || name.includes('paint')) diagram = drawColourStudyDiagram();
+  else if(name.includes('thumbnail') || name.includes('composition') || name.includes('layout') || name.includes('illustrat') || name.includes('project') || name.includes('scene')) diagram = drawThumbnailDiagram();
+  else if(name.includes('proportion') || name.includes('measurement') || name.includes('ratio')) diagram = drawFigureDiagram();
+  else diagram = drawGenericDiagram(s.name);
 
-  // Remove any existing task modal
   const existing = document.getElementById('taskModal');
   if(existing) existing.remove();
 
@@ -1931,35 +1949,34 @@ function openTaskDetail(dayId, sessionIdx){
   modal.style.zIndex = '400';
   modal.innerHTML = `
     <div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto;">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;">
-        <div>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem;">
+        <div style="flex:1;padding-right:12px;">
           <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">${d.label} · ${s.time}</div>
-          <h2 style="font-size:1.2rem;font-weight:800;letter-spacing:-0.03em;">${s.name}</h2>
+          <h2 style="font-size:1.2rem;font-weight:800;letter-spacing:-0.03em;margin-bottom:6px;">${s.name}</h2>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.6;">${s.desc}</div>
         </div>
-        <button id="closeTaskBtn" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:22px;line-height:1;padding:4px;flex-shrink:0;">×</button>
+        <button id="closeTaskBtn" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:24px;line-height:1;padding:0 4px;flex-shrink:0;margin-top:-4px;">×</button>
       </div>
 
       <div style="margin-bottom:1.25rem;">${diagram}</div>
 
       <div style="margin-bottom:1.25rem;">
-        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:0.75rem;padding-bottom:6px;border-bottom:1px solid var(--border);">Step-by-step instructions</div>
-        <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:0.75rem;padding-bottom:6px;border-bottom:1px solid var(--border);">Step-by-step — follow in order</div>
+        <div style="display:flex;flex-direction:column;gap:12px;">
           ${steps.map((step,i)=>`
-            <div style="display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:flex-start;">
-              <div style="width:24px;height:24px;border-radius:50%;background:var(--neon-dim);border:1px solid rgba(0,200,255,0.3);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:10px;color:var(--neon);flex-shrink:0;margin-top:2px;">${i+1}</div>
-              <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.7;">${step}</div>
+            <div style="display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:flex-start;">
+              <div style="width:26px;height:26px;border-radius:50%;background:var(--neon-dim);border:1px solid rgba(0,200,255,0.35);display:flex;align-items:center;justify-content:center;font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--neon);flex-shrink:0;margin-top:1px;">${i+1}</div>
+              <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.8;">${step}</div>
             </div>`).join('')}
         </div>
       </div>
 
       ${d.tip ? `<div style="background:rgba(0,200,255,0.06);border-left:2px solid var(--neon);padding:0.75rem 1rem;border-radius:0 var(--radius) var(--radius) 0;font-family:var(--font-mono);font-size:11px;color:rgba(0,200,255,0.8);line-height:1.7;margin-bottom:1rem;"><strong style="display:block;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;color:var(--neon);">Day Tip</strong>${d.tip}</div>` : ''}
 
-      <button id="gotItBtn" class="btn btn-neon" style="width:100%;justify-content:center;">Got it — let's draw</button>
+      <button id="gotItBtn" class="btn btn-neon" style="width:100%;justify-content:center;padding:0.85rem;font-size:12px;">Got it — let's draw ✏️</button>
     </div>`;
 
   document.body.appendChild(modal);
-
-  // Attach close listeners properly
   document.getElementById('closeTaskBtn').addEventListener('click', ()=> modal.remove());
   document.getElementById('gotItBtn').addEventListener('click', ()=> modal.remove());
   modal.addEventListener('click', e => { if(e.target === modal) modal.remove(); });
@@ -2047,8 +2064,8 @@ async function runAnalysis(){
   const sys=`You are an expert drawing coach reviewing a student's work. The student is an intermediate artist practising 1–2 hours/day, 4–5 days/week.
 Their focus areas: Fundamentals, Figure & Anatomy, Faces & Portraits, Colour & Shading, Personal Style.
 Analyse everything provided and respond ONLY with this exact JSON format — no markdown, no preamble, no trailing text:
-{"scores":{"Fundamentals":<1-10>,"Figure & Anatomy":<1-10>,"Faces & Portraits":<1-10>,"Colour & Shading":<1-10>,"Personal Style":<1-10>},"feedback":"<2-4 sentences of specific, honest, constructive feedback referencing what you actually see>","changes":"<2-3 sentences explaining exactly which schedule areas you are changing and why, based on the scores>","tips":[{"icon":"<single emoji>","title":"<short tip title>","body":"<2-3 sentence practical tip personalised to this student's specific weaknesses>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"}],"schedule":[{"id":0,"label":"Monday","rest":false,"focus":"<one of the 5 focus areas>","duration":"<e.g. 60-90 min>","sessions":[{"time":"<time range>","name":"<exercise name>","desc":"<specific description>"},{"time":"<time range>","name":"<exercise name>","desc":"<specific description>"},{"time":"<time range>","name":"<exercise name>","desc":"<specific description>"}],"tip":"<one practical tip>"},{"id":1,"label":"Tuesday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":2,"label":"Wednesday","rest":true,"focus":"Rest","duration":"","sessions":[],"tip":""},{"id":3,"label":"Thursday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":4,"label":"Friday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":5,"label":"Saturday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":6,"label":"Sunday","rest":true,"focus":"Rest","duration":"","sessions":[],"tip":""}]}
-RULES: Keep Wednesday (id:2) and Sunday (id:6) as rest days always. Give lowest-scored skills more time and harder exercises. Each object in schedule array MUST have the correct numeric "id" field (0–6). Do not truncate the JSON.`;
+{"scores":{"Fundamentals":<1-10>,"Figure & Anatomy":<1-10>,"Faces & Portraits":<1-10>,"Colour & Shading":<1-10>,"Personal Style":<1-10>},"feedback":"<2-4 sentences of specific, honest, constructive feedback>","changes":"<2-3 sentences explaining schedule changes>","tips":[{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"}],"schedule":[{"id":0,"label":"Monday","rest":false,"focus":"<focus>","duration":"<e.g. 60-90 min>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>","steps":["<step 1 — beginner-friendly, specific, actionable>","<step 2>","<step 3>","<step 4>","<step 5>","<step 6>"]},{"time":"<range>","name":"<name>","desc":"<desc>","steps":["<step 1>","<step 2>","<step 3>","<step 4>","<step 5>","<step 6>"]},{"time":"<range>","name":"<name>","desc":"<desc>","steps":["<step 1>","<step 2>","<step 3>","<step 4>","<step 5>","<step 6>"]}],"tip":"<tip>"},{"id":1,"label":"Tuesday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>","steps":["<step 1>","<step 2>","<step 3>","<step 4>","<step 5>","<step 6>"]},{"time":"<range>","name":"<name>","desc":"<desc>","steps":["<step 1>","<step 2>","<step 3>","<step 4>","<step 5>","<step 6>"]},{"time":"<range>","name":"<name>","desc":"<desc>","steps":["<step 1>","<step 2>","<step 3>","<step 4>","<step 5>","<step 6>"]}],"tip":"<tip>"},{"id":2,"label":"Wednesday","rest":true,"focus":"Rest","duration":"","sessions":[],"tip":""},{"id":3,"label":"Thursday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>","steps":["<step 1>","<step 2>","<step 3>","<step 4>","<step 5>","<step 6>"]},{"time":"<range>","name":"<name>","desc":"<desc>","steps":["<step 1>","<step 2>","<step 3>","<step 4>","<step 5>","<step 6>"]},{"time":"<range>","name":"<name>","desc":"<desc>","steps":["<step 1>","<step 2>","<step 3>","<step 4>","<step 5>","<step 6>"]}],"tip":"<tip>"},{"id":4,"label":"Friday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>","steps":["<step 1>","<step 2>","<step 3>","<step 4>","<step 5>","<step 6>"]},{"time":"<range>","name":"<name>","desc":"<desc>","steps":["<step 1>","<step 2>","<step 3>","<step 4>","<step 5>","<step 6>"]},{"time":"<range>","name":"<name>","desc":"<desc>","steps":["<step 1>","<step 2>","<step 3>","<step 4>","<step 5>","<step 6>"]}],"tip":"<tip>"},{"id":5,"label":"Saturday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>","steps":["<step 1>","<step 2>","<step 3>","<step 4>","<step 5>","<step 6>"]},{"time":"<range>","name":"<name>","desc":"<desc>","steps":["<step 1>","<step 2>","<step 3>","<step 4>","<step 5>","<step 6>"]},{"time":"<range>","name":"<name>","desc":"<desc>","steps":["<step 1>","<step 2>","<step 3>","<step 4>","<step 5>","<step 6>"]}],"tip":"<tip>"},{"id":6,"label":"Sunday","rest":true,"focus":"Rest","duration":"","sessions":[],"tip":""}]}
+RULES: Keep Wednesday (id:2) and Sunday (id:6) as rest days. Steps must be beginner-friendly, numbered, and specific enough that someone with zero drawing knowledge can follow them. Each step should be 1-2 sentences. Do not truncate the JSON.`;
 
   try{
     const res = await fetch('/api/analyse',{
@@ -2056,7 +2073,7 @@ RULES: Keep Wednesday (id:2) and Sunday (id:6) as rest days always. Give lowest-
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({
         model:'claude-sonnet-4-5',
-        max_tokens:2500,
+        max_tokens:4000,
         system:sys,
         messages:[{role:'user',content}]
       })
