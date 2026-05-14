@@ -754,7 +754,7 @@ main { max-width: 1140px; margin: 0 auto; padding: 2rem; }
     <button class="active" onclick="switchView('schedule',this)">Schedule</button>
     <button onclick="switchView('log',this)">Practice Log</button>
     <button onclick="switchView('hof',this)">Hall of Fame</button>
-    <button onclick="switchView('progress',this)">Progress</button>
+    <button onclick="switchView('progress',this)">Rank</button>
     <button onclick="switchView('reminders',this)">Reminders</button>
   </nav>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;min-width:100px;">
@@ -831,15 +831,57 @@ main { max-width: 1140px; margin: 0 auto; padding: 2rem; }
     <div id="hofContainer"></div>
   </div>
 
-  <!-- ── PROGRESS ── -->
+  <!-- ── PROGRESS / RANK ── -->
   <div class="view" id="view-progress">
     <div class="page-head">
       <div>
-        <h1>Progress <span class="accent">Tracker</span></h1>
-        <p>Visualise your improvement over time</p>
+        <h1>Your <span class="accent">Rank</span></h1>
+        <p id="rankSubtitle">Track your growth — every session counts</p>
       </div>
     </div>
-    <div class="progress-grid" id="statsGrid"></div>
+
+    <!-- RANK CARD -->
+    <div id="rankCard" style="position:relative;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.75rem;margin-bottom:1.25rem;overflow:hidden;">
+      <div style="position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%, rgba(0,200,255,0.07) 0%, transparent 60%);pointer-events:none;"></div>
+      <div style="position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--neon),transparent);opacity:0.6;"></div>
+      <div style="display:grid;grid-template-columns:auto 1fr auto;gap:1.5rem;align-items:center;position:relative;">
+        <!-- Rank badge -->
+        <div id="rankBadge" style="width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:2.2rem;flex-shrink:0;border:2px solid var(--neon);box-shadow:var(--neon-glow);background:var(--bg3);">🎨</div>
+        <!-- Rank info -->
+        <div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;">Current Rank</div>
+          <div id="rankTitle" style="font-size:1.6rem;font-weight:800;letter-spacing:-0.04em;color:var(--neon);text-shadow:var(--neon-glow-sm);">Sketch Cadet</div>
+          <div id="rankDesc" style="font-family:var(--font-mono);font-size:11px;color:var(--text2);margin-top:4px;line-height:1.5;">Log more sessions and run AI reviews to climb the ranks.</div>
+          <!-- XP bar -->
+          <div style="margin-top:12px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+              <span style="font-family:var(--font-mono);font-size:9px;color:var(--text3);" id="xpLabel">XP Progress</span>
+              <span style="font-family:var(--font-mono);font-size:9px;color:var(--neon);" id="xpCount">0 XP</span>
+            </div>
+            <div style="height:6px;background:var(--bg4);border-radius:99px;overflow:hidden;">
+              <div id="xpBar" style="height:100%;width:0%;background:var(--neon);border-radius:99px;box-shadow:var(--neon-glow-sm);transition:width 1s cubic-bezier(0.4,0,0.2,1);"></div>
+            </div>
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-top:4px;" id="xpNext"></div>
+          </div>
+        </div>
+        <!-- Level number -->
+        <div style="text-align:center;flex-shrink:0;">
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:2px;">Level</div>
+          <div id="rankLevel" style="font-size:3rem;font-weight:800;color:var(--neon);text-shadow:var(--neon-glow);letter-spacing:-0.04em;line-height:1;">1</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS GRID -->
+    <div class="progress-grid" id="statsGrid" style="margin-bottom:1.25rem;"></div>
+
+    <!-- ACHIEVEMENTS -->
+    <div class="chart-card" style="margin-bottom:1.25rem;">
+      <h3>Achievements</h3>
+      <div id="achievementsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-top:0.25rem;"></div>
+    </div>
+
+    <!-- CHARTS -->
     <div class="chart-card">
       <h3>Sessions per week</h3>
       <div class="chart-wrap"><canvas id="sessionsChart"></canvas></div>
@@ -1447,19 +1489,127 @@ function showStorageWarning(usedKB, limitKB){
 }
 
 // ─── PROGRESS ─────────────────────────────────────────────────
-function renderProgress(){
-  const total=state.entries.length+state.hof.length;
-  const thisWeek=getThisWeekCount();
-  const streak=getStreak();
-  const latest=getLatestScores();
-  const avgScore=latest?Math.round(Object.values(latest).reduce((a,b)=>a+b,0)/Object.keys(latest).length):0;
+// ─── RANK SYSTEM ─────────────────────────────────────────────
+const RANKS = [
+  { level:1,  title:'Sketch Cadet',     icon:'🎨', xp:0,    desc:'Every master was once a beginner. Your journey starts now.' },
+  { level:2,  title:'Line Apprentice',  icon:'✏️', xp:50,   desc:'You\'re building the habit. Consistency is your superpower.' },
+  { level:3,  title:'Form Student',     icon:'📐', xp:120,  desc:'You understand the basics. Now it\'s about depth.' },
+  { level:4,  title:'Value Seeker',     icon:'🌑', xp:220,  desc:'Light and shadow are starting to make sense. Keep going.' },
+  { level:5,  title:'Anatomy Scout',    icon:'🦴', xp:350,  desc:'The figure is becoming familiar. Push your understanding.' },
+  { level:6,  title:'Portrait Adept',   icon:'👤', xp:500,  desc:'Faces hold their structure in your hands now.' },
+  { level:7,  title:'Colour Initiate',  icon:'🎭', xp:680,  desc:'You see the world in values and temperatures.' },
+  { level:8,  title:'Style Forger',     icon:'⚡', xp:900,  desc:'Your mark is becoming your own. Protect it.' },
+  { level:9,  title:'Skilled Drafter',  icon:'🔥', xp:1150, desc:'Technical mastery is within reach. Don\'t slow down.' },
+  { level:10, title:'Visual Artist',    icon:'🌟', xp:1450, desc:'You draw with intention. Every line has a reason.' },
+  { level:11, title:'Master Craftsman', icon:'💎', xp:1800, desc:'Few reach this level. You\'ve earned every stroke.' },
+  { level:12, title:'Grand Illustrator',icon:'👑', xp:2200, desc:'Legendary. The craft bends to your will.' }
+];
 
-  document.getElementById('statsGrid').innerHTML=`
-    <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-label">Total Sessions</div></div>
-    <div class="stat-card"><div class="stat-val">${thisWeek}</div><div class="stat-label">This Week</div></div>
-    <div class="stat-card"><div class="stat-val">${streak}</div><div class="stat-label">Day Streak</div></div>
+const ACHIEVEMENTS = [
+  { id:'first_session',   icon:'🖊️',  title:'First Stroke',      desc:'Log your first practice session',        check: s => s.entries.length >= 1 },
+  { id:'sessions_5',      icon:'📓',  title:'Getting Going',     desc:'Log 5 practice sessions',                check: s => s.entries.length >= 5 },
+  { id:'sessions_10',     icon:'📚',  title:'Double Digits',     desc:'Log 10 practice sessions',               check: s => s.entries.length >= 10 },
+  { id:'sessions_25',     icon:'🎯',  title:'Dedicated',         desc:'Log 25 practice sessions',               check: s => s.entries.length >= 25 },
+  { id:'sessions_50',     icon:'🏆',  title:'Relentless',        desc:'Log 50 practice sessions',               check: s => s.entries.length >= 50 },
+  { id:'first_hof',       icon:'⭐',  title:'Hall Worthy',       desc:'Add your first Hall of Fame piece',      check: s => s.hof.length >= 1 },
+  { id:'hof_5',           icon:'🌟',  title:'Gallery Owner',     desc:'Add 5 pieces to Hall of Fame',           check: s => s.hof.length >= 5 },
+  { id:'first_ai',        icon:'🤖',  title:'AI Coached',        desc:'Run your first AI review',               check: s => s.skillHistory.length >= 1 },
+  { id:'ai_3',            icon:'🧠',  title:'Data Driven',       desc:'Run 3 AI reviews',                       check: s => s.skillHistory.length >= 3 },
+  { id:'streak_3',        icon:'🔥',  title:'On Fire',           desc:'Maintain a 3-day streak',                check: s => getStreak() >= 3 },
+  { id:'streak_7',        icon:'⚡',  title:'Week Warrior',      desc:'Maintain a 7-day streak',                check: s => getStreak() >= 7 },
+  { id:'streak_14',       icon:'💪',  title:'Fortnight Force',   desc:'Maintain a 14-day streak',               check: s => getStreak() >= 14 },
+  { id:'all_5_areas',     icon:'🗺️',  title:'Renaissance Artist',desc:'Log a session in all 5 focus areas',    check: s => new Set(s.entries.map(e=>e.focus)).size >= 5 },
+  { id:'score_8',         icon:'📈',  title:'Sharp Eye',         desc:'Get a skill score of 8+ in any area',    check: s => { const l=getLatestScores(); return l && Object.values(l).some(v=>v>=8); } },
+  { id:'score_all_6',     icon:'💎',  title:'Well Rounded',      desc:'Score 6+ in all skill areas',            check: s => { const l=getLatestScores(); return l && Object.values(l).every(v=>v>=6); } },
+];
+
+function getXP(){
+  const total = state.entries.length;
+  const hof = state.hof.length;
+  const reviews = state.skillHistory.length;
+  const streak = getStreak();
+  const avgScore = (() => { const l=getLatestScores(); return l ? Math.round(Object.values(l).reduce((a,b)=>a+b,0)/Object.keys(l).length) : 0; })();
+  return (total * 10) + (hof * 25) + (reviews * 30) + (streak * 5) + (avgScore * 8);
+}
+
+function getRankFromXP(xp){
+  let rank = RANKS[0];
+  for(const r of RANKS){ if(xp >= r.xp) rank = r; }
+  return rank;
+}
+
+function renderProgress(){
+  const total = state.entries.length + state.hof.length;
+  const thisWeek = getThisWeekCount();
+  const streak = getStreak();
+  const latest = getLatestScores();
+  const avgScore = latest ? Math.round(Object.values(latest).reduce((a,b)=>a+b,0)/Object.keys(latest).length) : 0;
+  const xp = getXP();
+  const rank = getRankFromXP(xp);
+  const nextRank = RANKS.find(r => r.xp > xp);
+
+  // Update rank card
+  document.getElementById('rankBadge').textContent = rank.icon;
+  document.getElementById('rankTitle').textContent = rank.title;
+  document.getElementById('rankDesc').textContent = rank.desc;
+  document.getElementById('rankLevel').textContent = rank.level;
+  document.getElementById('xpCount').textContent = `${xp} XP`;
+
+  if(nextRank){
+    const pct = Math.min(100, Math.round(((xp - rank.xp) / (nextRank.xp - rank.xp)) * 100));
+    document.getElementById('xpBar').style.width = pct + '%';
+    document.getElementById('xpNext').textContent = `${nextRank.xp - xp} XP to ${nextRank.title}`;
+    document.getElementById('xpLabel').textContent = `Level ${rank.level} → ${rank.level+1}`;
+  } else {
+    document.getElementById('xpBar').style.width = '100%';
+    document.getElementById('xpNext').textContent = 'Max rank achieved 👑';
+  }
+
+  // Rank card border colour based on level
+  const rankColors = ['#00c8ff','#00c8ff','#00e676','#00e676','#ffc107','#ffc107','#ff6b35','#ff6b35','#a855f7','#a855f7','#ff4444','#ffd700'];
+  const col = rankColors[rank.level - 1] || '#00c8ff';
+  const card = document.getElementById('rankCard');
+  card.style.borderColor = col + '55';
+  card.querySelector('div[style*="height:2px"]').style.background = `linear-gradient(90deg,${col},transparent)`;
+  document.getElementById('rankBadge').style.borderColor = col;
+  document.getElementById('rankBadge').style.boxShadow = `0 0 16px ${col}55`;
+  document.getElementById('rankTitle').style.color = col;
+  document.getElementById('rankTitle').style.textShadow = `0 0 8px ${col}55`;
+  document.getElementById('xpBar').style.background = col;
+  document.getElementById('xpCount').style.color = col;
+
+  // Stats grid
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card"><div class="stat-val">${xp}</div><div class="stat-label">Total XP</div></div>
+    <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-label">Sessions</div></div>
+    <div class="stat-card"><div class="stat-val">${streak}🔥</div><div class="stat-label">Day Streak</div></div>
     <div class="stat-card"><div class="stat-val">${state.hof.length}</div><div class="stat-label">Hall of Fame</div></div>
     <div class="stat-card"><div class="stat-val">${avgScore||'—'}</div><div class="stat-label">Avg AI Score</div></div>`;
+
+  // Achievements
+  const achieved = ACHIEVEMENTS.filter(a => { try{ return a.check(state); } catch{ return false; } });
+  const locked = ACHIEVEMENTS.filter(a => !achieved.includes(a));
+  const achGrid = document.getElementById('achievementsGrid');
+  if(achGrid){
+    achGrid.innerHTML = [
+      ...achieved.map(a => `
+        <div style="background:var(--bg3);border:1px solid rgba(0,200,255,0.25);border-radius:var(--radius);padding:0.75rem;display:flex;gap:10px;align-items:flex-start;">
+          <span style="font-size:1.4rem;flex-shrink:0;">${a.icon}</span>
+          <div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:-0.01em;color:var(--neon);">${a.title}</div>
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--text2);margin-top:2px;line-height:1.5;">${a.desc}</div>
+          </div>
+        </div>`),
+      ...locked.map(a => `
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem;display:flex;gap:10px;align-items:flex-start;opacity:0.35;">
+          <span style="font-size:1.4rem;flex-shrink:0;filter:grayscale(1);">🔒</span>
+          <div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:-0.01em;color:var(--text3);">${a.title}</div>
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);margin-top:2px;line-height:1.5;">${a.desc}</div>
+          </div>
+        </div>`)
+    ].join('');
+  }
 }
 
 function getThisWeekCount(){
