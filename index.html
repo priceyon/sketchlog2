@@ -1219,8 +1219,126 @@ function renderEntries(){
         </div>
         <div class="entry-focus">${e.focus}</div>
         <div class="entry-notes">${e.notes||'<span style="color:var(--text3)">No notes</span>'}</div>
+        <button onclick="getSessionFeedback(${i})" style="margin-top:10px;width:100%;background:var(--neon-dim);border:1px solid rgba(0,200,255,0.3);border-radius:var(--radius);padding:6px 10px;font-family:var(--font-mono);font-size:10px;color:var(--neon);cursor:pointer;letter-spacing:0.04em;transition:all 0.15s;" onmouseover="this.style.background='rgba(0,200,255,0.18)';this.style.borderColor='var(--neon)'" onmouseout="this.style.background='var(--neon-dim)';this.style.borderColor='rgba(0,200,255,0.3)'">✦ AI Tips for this session</button>
       </div>
     </div>`).join('')}</div>`;
+}
+
+// ─── SESSION AI FEEDBACK ──────────────────────────────────────
+async function getSessionFeedback(idx){
+  const e = state.entries[idx];
+
+  // Build modal
+  const existing = document.getElementById('sessionFeedbackModal');
+  if(existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.id = 'sessionFeedbackModal';
+  modal.style.zIndex = '400';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:560px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;">
+        <div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">${fmtDate(e.date)} · ${e.focus}</div>
+          <h2 style="font-size:1.2rem;font-weight:800;letter-spacing:-0.03em;">AI Session <span style="color:var(--neon);">Feedback</span></h2>
+        </div>
+        <button id="closeFeedbackBtn" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:24px;line-height:1;padding:0 4px;flex-shrink:0;">×</button>
+      </div>
+
+      <!-- Loading state -->
+      <div id="feedbackLoading" style="text-align:center;padding:2.5rem 1rem;">
+        <div style="width:36px;height:36px;border:2px solid var(--bg4);border-top-color:var(--neon);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem;box-shadow:var(--neon-glow-sm);"></div>
+        <p style="font-family:var(--font-mono);font-size:11px;color:var(--text3);" id="feedbackLoadingText">Analysing your session…</p>
+      </div>
+
+      <!-- Result state -->
+      <div id="feedbackResult" style="display:none;">
+        <div id="feedbackContent"></div>
+        <button id="closeFeedbackBtn2" class="btn btn-neon" style="width:100%;justify-content:center;margin-top:1.25rem;padding:0.85rem;">Got it ✓</button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(modal);
+  document.getElementById('closeFeedbackBtn').addEventListener('click', ()=> modal.remove());
+  modal.addEventListener('click', e => { if(e.target === modal) modal.remove(); });
+
+  // Build prompt content
+  const content = [];
+
+  if(e.imageData && e.imageData.startsWith('data:image')){
+    content.push({type:'text', text:`Here is my drawing practice session. Focus area: ${e.focus}. Date: ${e.date}. My notes: "${e.notes||'no notes added'}". Please analyse my drawing and give me personalised feedback.`});
+    const mt = e.imageData.startsWith('data:image/png') ? 'image/png' : 'image/jpeg';
+    content.push({type:'image', source:{type:'base64', media_type:mt, data:e.imageData.split(',')[1]}});
+  } else {
+    content.push({type:'text', text:`My drawing practice session. Focus area: ${e.focus}. Date: ${e.date}. My notes: "${e.notes||'no notes added'}". No image uploaded. Please give me personalised feedback based on my notes and focus area.`});
+  }
+
+  const sys = `You are a friendly, expert drawing coach giving feedback on a single practice session. Be specific, honest, encouraging, and practical. The student is an intermediate artist.
+Respond ONLY in this exact JSON format — no markdown, no preamble:
+{"whatWentWell":"<1-2 sentences on positives — if no image, base this on their focus area and notes>","mainFocus":"<the single most important thing to work on next session — be very specific>","tips":[{"icon":"<emoji>","title":"<short title>","body":"<2-3 sentence actionable tip specific to ${e.focus}>"},{"icon":"<emoji>","title":"<short title>","body":"<tip>"},{"icon":"<emoji>","title":"<short title>","body":"<tip>"}],"drill":"<one specific 5-10 minute drill they can do RIGHT NOW to address their weakness — be very concrete>"}`;
+
+  try {
+    const res = await fetch('/api/analyse', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 800,
+        system: sys,
+        messages: [{role:'user', content}]
+      })
+    });
+
+    if(!res.ok) throw new Error(`API error ${res.status}`);
+    const data = await res.json();
+    if(data.error) throw new Error(data.error.message);
+
+    const raw = data.content.map(i=>i.type==='text'?i.text:'').join('').replace(/```json|```/g,'').trim();
+    let result;
+    try { result = JSON.parse(raw); }
+    catch { const m = raw.match(/\{[\s\S]*\}/); result = m ? JSON.parse(m[0]) : null; }
+    if(!result) throw new Error('Could not parse response');
+
+    document.getElementById('feedbackLoading').style.display = 'none';
+    document.getElementById('feedbackResult').style.display = 'block';
+    document.getElementById('feedbackContent').innerHTML = `
+
+      <!-- What went well -->
+      <div style="background:rgba(0,230,118,0.07);border:1px solid rgba(0,230,118,0.2);border-radius:var(--radius);padding:0.875rem 1rem;margin-bottom:1rem;">
+        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:#00e676;margin-bottom:5px;">✓ What went well</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.7;">${result.whatWentWell}</div>
+      </div>
+
+      <!-- Main focus -->
+      <div style="background:rgba(0,200,255,0.07);border:1px solid rgba(0,200,255,0.25);border-radius:var(--radius);padding:0.875rem 1rem;margin-bottom:1rem;">
+        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--neon);margin-bottom:5px;">▶ Focus next session</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.7;">${result.mainFocus}</div>
+      </div>
+
+      <!-- Tips -->
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:1rem;">
+        ${result.tips.map(t=>`
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem 0.875rem;display:flex;gap:10px;align-items:flex-start;">
+            <span style="font-size:1.2rem;flex-shrink:0;">${t.icon}</span>
+            <div>
+              <div style="font-size:12px;font-weight:700;letter-spacing:-0.01em;margin-bottom:3px;">${t.title}</div>
+              <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.65;">${t.body}</div>
+            </div>
+          </div>`).join('')}
+      </div>
+
+      <!-- Drill -->
+      <div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.25);border-radius:var(--radius);padding:0.875rem 1rem;">
+        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:#a855f7;margin-bottom:5px;">⚡ Try this right now</div>
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.7;">${result.drill}</div>
+      </div>`;
+
+    document.getElementById('closeFeedbackBtn2').addEventListener('click', ()=> modal.remove());
+
+  } catch(err) {
+    document.getElementById('feedbackLoadingText').textContent = `Error: ${err.message}. Please try again.`;
+  }
 }
 
 // ─── HALL OF FAME ─────────────────────────────────────────────
