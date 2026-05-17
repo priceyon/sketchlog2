@@ -810,7 +810,10 @@ main { max-width: 1140px; margin: 0 auto; padding: 2rem; }
         <h1>Practice <span class="accent">Log</span></h1>
         <p>Upload your drawings after each session</p>
       </div>
-      <button class="btn btn-neon" onclick="openModal('uploadModal')">+ Add Session</button>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline" onclick="openAiTipsHistory()">📋 AI Tips History</button>
+        <button class="btn btn-neon" onclick="openModal('uploadModal')">+ Add Session</button>
+      </div>
     </div>
     <div id="entriesContainer"></div>
   </div>
@@ -1252,21 +1255,85 @@ function renderEntries(){
     return;
   }
   c.innerHTML=`<div class="entries-grid">${state.entries.map((e,i)=>`
-    <div class="entry-card">
-      ${e.imageData?`<img class="entry-img" src="${e.imageData}" alt="" onclick="openLightboxEntry(${i})" style="cursor:zoom-in">`:`<div class="entry-img-placeholder">✏️</div>`}
+    <div class="entry-card" style="cursor:pointer;" onclick="openEntryDetail(${i})">
+      ${e.imageData?`<img class="entry-img" src="${e.imageData}" alt="" style="pointer-events:none;">`:`<div class="entry-img-placeholder">✏️</div>`}
       <div class="entry-body">
         <div class="entry-meta">
           <span class="entry-tag">${e.focus}</span>
           <span class="entry-date">${fmtDate(e.date)}</span>
         </div>
         <div class="entry-focus">${e.focus}</div>
-        <div class="entry-notes">${e.notes||'<span style="color:var(--text3)">No notes</span>'}</div>
-        <div style="display:flex;gap:6px;margin-top:10px;">
+        <div class="entry-notes">${e.notes||'<span style="color:var(--text3)">No notes — click to view</span>'}</div>
+        ${e.aiTips ? `<div style="margin-top:6px;font-family:var(--font-mono);font-size:9px;color:var(--neon);letter-spacing:0.04em;">✦ AI tips saved</div>` : ''}
+        <div style="display:flex;gap:6px;margin-top:10px;" onclick="event.stopPropagation()">
           <button onclick="getSessionFeedback(${i})" style="flex:1;background:var(--neon-dim);border:1px solid rgba(0,200,255,0.3);border-radius:var(--radius);padding:6px 10px;font-family:var(--font-mono);font-size:10px;color:var(--neon);cursor:pointer;letter-spacing:0.04em;transition:all 0.15s;" onmouseover="this.style.background='rgba(0,200,255,0.18)';this.style.borderColor='var(--neon)'" onmouseout="this.style.background='var(--neon-dim)';this.style.borderColor='rgba(0,200,255,0.3)'">✦ AI Tips</button>
-          <button onclick="deleteEntry(${i})" style="background:rgba(255,68,68,0.07);border:1px solid rgba(255,68,68,0.2);border-radius:var(--radius);padding:6px 10px;font-family:var(--font-mono);font-size:10px;color:#ff4444;cursor:pointer;letter-spacing:0.04em;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,68,68,0.18)';this.style.borderColor='#ff4444'" onmouseout="this.style.background='rgba(255,68,68,0.07)';this.style.borderColor='rgba(255,68,68,0.2)'">🗑 Delete</button>
+          <button onclick="deleteEntry(${i})" style="background:rgba(255,68,68,0.07);border:1px solid rgba(255,68,68,0.2);border-radius:var(--radius);padding:6px 10px;font-family:var(--font-mono);font-size:10px;color:#ff4444;cursor:pointer;letter-spacing:0.04em;transition:all 0.15s;" onmouseover="this.style.background='rgba(255,68,68,0.18)';this.style.borderColor='#ff4444'" onmouseout="this.style.background='rgba(255,68,68,0.07)';this.style.borderColor='rgba(255,68,68,0.2)'">🗑</button>
         </div>
       </div>
     </div>`).join('')}</div>`;
+}
+
+function openEntryDetail(idx){
+  const e = state.entries[idx];
+  const existing = document.getElementById('entryDetailModal');
+  if(existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.id = 'entryDetailModal';
+  modal.style.zIndex = '400';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:600px;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.25rem;">
+        <div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin-bottom:4px;">${fmtDate(e.date)}</div>
+          <h2 style="font-size:1.2rem;font-weight:800;letter-spacing:-0.03em;">${e.focus}</h2>
+        </div>
+        <button id="closeEntryBtn" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:24px;line-height:1;padding:0 4px;flex-shrink:0;">×</button>
+      </div>
+
+      ${e.imageData ? `<img src="${e.imageData}" style="width:100%;border-radius:var(--radius);margin-bottom:1.25rem;object-fit:contain;max-height:300px;background:var(--bg3);" onclick="openLightbox('${e.imageData}')" alt="">` : ''}
+
+      <div style="margin-bottom:1.25rem;">
+        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">Session Notes</div>
+        <div style="font-family:var(--font-mono);font-size:12px;color:var(--text2);line-height:1.8;white-space:pre-wrap;">${e.notes || 'No notes were added for this session.'}</div>
+      </div>
+
+      ${e.aiTips ? `
+      <div style="margin-bottom:1.25rem;">
+        <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:var(--neon);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border);">✦ Saved AI Feedback</div>
+        <div style="background:rgba(0,230,118,0.07);border:1px solid rgba(0,230,118,0.2);border-radius:var(--radius);padding:0.875rem 1rem;margin-bottom:8px;">
+          <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:#00e676;margin-bottom:5px;">✓ What went well</div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.7;">${e.aiTips.whatWentWell}</div>
+        </div>
+        <div style="background:rgba(0,200,255,0.07);border:1px solid rgba(0,200,255,0.2);border-radius:var(--radius);padding:0.875rem 1rem;margin-bottom:8px;">
+          <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:var(--neon);margin-bottom:5px;">▶ Focus next session</div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.7;">${e.aiTips.mainFocus}</div>
+        </div>
+        ${e.aiTips.tips.map(t=>`
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:0.75rem 0.875rem;display:flex;gap:10px;align-items:flex-start;margin-bottom:6px;">
+            <span style="font-size:1.2rem;flex-shrink:0;">${t.icon}</span>
+            <div>
+              <div style="font-size:12px;font-weight:700;letter-spacing:-0.01em;margin-bottom:3px;">${t.title}</div>
+              <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.65;">${t.body}</div>
+            </div>
+          </div>`).join('')}
+        <div style="background:rgba(168,85,247,0.08);border:1px solid rgba(168,85,247,0.25);border-radius:var(--radius);padding:0.875rem 1rem;">
+          <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.06em;color:#a855f7;margin-bottom:5px;">⚡ Drill</div>
+          <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.7;">${e.aiTips.drill}</div>
+        </div>
+      </div>` : `
+      <div style="background:var(--bg3);border:1px dashed var(--border2);border-radius:var(--radius);padding:1rem;text-align:center;margin-bottom:1.25rem;">
+        <div style="font-family:var(--font-mono);font-size:11px;color:var(--text3);">No AI feedback saved yet — tap ✦ AI Tips on the card to generate some.</div>
+      </div>`}
+
+      <button id="closeEntryBtn2" class="btn btn-ghost" style="width:100%;justify-content:center;">Close</button>
+    </div>`;
+
+  document.body.appendChild(modal);
+  document.getElementById('closeEntryBtn').addEventListener('click', ()=> modal.remove());
+  document.getElementById('closeEntryBtn2').addEventListener('click', ()=> modal.remove());
+  modal.addEventListener('click', ev => { if(ev.target === modal) modal.remove(); });
 }
 
 function deleteEntry(idx){
@@ -1274,6 +1341,64 @@ function deleteEntry(idx){
   state.entries.splice(idx, 1);
   const d=load(); d.entries=state.entries; safeSave(d);
   renderEntries(); renderProgress();
+}
+
+function openAiTipsHistory(){
+  const tipped = state.entries.filter(e => e.aiTips);
+  const existing = document.getElementById('tipsHistoryModal');
+  if(existing) existing.remove();
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay open';
+  modal.id = 'tipsHistoryModal';
+  modal.style.zIndex = '400';
+  modal.innerHTML = `
+    <div class="modal" style="max-width:620px;max-height:90vh;overflow-y:auto;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+        <div>
+          <h2 style="font-size:1.2rem;font-weight:800;letter-spacing:-0.03em;">AI Tips <span style="color:var(--neon);">History</span></h2>
+          <p style="font-family:var(--font-mono);font-size:10px;color:var(--text3);margin-top:3px;">${tipped.length} session${tipped.length!==1?'s':''} with saved AI feedback</p>
+        </div>
+        <button id="closeTipsHistoryBtn" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:24px;line-height:1;padding:0 4px;">×</button>
+      </div>
+      ${tipped.length === 0 ? `
+        <div class="empty" style="padding:2rem;">
+          <div class="empty-icon">✦</div>
+          <h3>No AI tips saved yet</h3>
+          <p>Tap ✦ AI Tips on any practice log card to generate and save feedback.</p>
+        </div>` :
+        tipped.map(e => `
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.1rem;margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.875rem;padding-bottom:0.75rem;border-bottom:1px solid var(--border);">
+              <span style="font-family:var(--font-mono);font-size:9px;padding:2px 8px;border-radius:99px;border:1px solid var(--neon);color:var(--neon);background:var(--neon-dim);">${e.focus}</span>
+              <span style="font-family:var(--font-mono);font-size:9px;color:var(--text3);">${fmtDate(e.date)}</span>
+            </div>
+            <div style="background:rgba(0,230,118,0.06);border-radius:var(--radius);padding:0.75rem;margin-bottom:8px;">
+              <div style="font-family:var(--font-mono);font-size:9px;color:#00e676;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">✓ What went well</div>
+              <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.65;">${e.aiTips.whatWentWell}</div>
+            </div>
+            <div style="background:rgba(0,200,255,0.06);border-radius:var(--radius);padding:0.75rem;margin-bottom:8px;">
+              <div style="font-family:var(--font-mono);font-size:9px;color:var(--neon);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">▶ Focus next session</div>
+              <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.65;">${e.aiTips.mainFocus}</div>
+            </div>
+            ${e.aiTips.tips ? e.aiTips.tips.map(t=>`
+              <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:0.6rem 0.75rem;display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;">
+                <span style="font-size:1.1rem;flex-shrink:0;">${t.icon}</span>
+                <div>
+                  <div style="font-size:11px;font-weight:700;margin-bottom:2px;">${t.title}</div>
+                  <div style="font-family:var(--font-mono);font-size:10px;color:var(--text2);line-height:1.6;">${t.body}</div>
+                </div>
+              </div>`).join('') : ''}
+            <div style="background:rgba(168,85,247,0.06);border-radius:var(--radius);padding:0.75rem;">
+              <div style="font-family:var(--font-mono);font-size:9px;color:#a855f7;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:4px;">⚡ Drill</div>
+              <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.65;">${e.aiTips.drill}</div>
+            </div>
+          </div>`).join('')}
+      <button id="closeTipsHistoryBtn2" class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:0.5rem;">Close</button>
+    </div>`;
+  document.body.appendChild(modal);
+  document.getElementById('closeTipsHistoryBtn').addEventListener('click', ()=> modal.remove());
+  document.getElementById('closeTipsHistoryBtn2').addEventListener('click', ()=> modal.remove());
+  modal.addEventListener('click', ev => { if(ev.target === modal) modal.remove(); });
 }
 
 // ─── SESSION AI FEEDBACK ──────────────────────────────────────
@@ -1385,6 +1510,11 @@ Respond ONLY in this exact JSON format — no markdown, no preamble:
         <div style="font-family:var(--font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:#a855f7;margin-bottom:5px;">⚡ Try this right now</div>
         <div style="font-family:var(--font-mono);font-size:11px;color:var(--text2);line-height:1.7;">${result.drill}</div>
       </div>`;
+
+    // Save tips to the entry for later viewing
+    state.entries[idx].aiTips = result;
+    const d2=load(); d2.entries=state.entries; safeSave(d2);
+    renderEntries();
 
     document.getElementById('closeFeedbackBtn2').addEventListener('click', ()=> modal.remove());
 
