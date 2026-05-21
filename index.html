@@ -781,7 +781,7 @@ main { max-width: 1140px; margin: 0 auto; padding: 2rem; }
     <div class="page-head">
       <div>
         <h1>Weekly <span class="accent">Schedule</span></h1>
-        <p>Intermediate · 1–2 hrs/day · 4–5 days/week</p>
+        <p>Intermediate · 1–1.5 hrs/day · 4–5 days/week</p>
       </div>
       <button class="btn btn-neon" onclick="openAnalysis()">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
@@ -1057,14 +1057,14 @@ const defaultSched = [
     {time:'45–90 min',name:'Shape construction',desc:'Break complex objects into simple forms. Sketch from observation.'}
   ],tip:'Treat fundamentals like scales in music — cleaner lines now means freer drawing later.'},
   {id:1,label:'Tuesday',rest:false,focus:'Figure & Anatomy',duration:'60–90 min',sessions:[
-    {time:'0–15 min',name:'Gesture drawing',desc:'30s–2 min poses. Capture flow, not detail.'},
-    {time:'15–60 min',name:'Anatomy deep-dive',desc:'Rotate through body regions weekly — arms, torso, legs, hands.'},
-    {time:'60–90 min',name:'Reference figure',desc:'One full pose built methodically from skeleton outward.'}
+    {time:'0–10 min',name:'Gesture drawing',desc:'30s–2 min poses. Capture flow, not detail.'},
+    {time:'10–50 min',name:'Anatomy deep-dive',desc:'Rotate through body regions weekly — arms, torso, legs, hands.'},
+    {time:'50–90 min',name:'Reference figure',desc:'One full pose built methodically from skeleton outward.'}
   ],tip:'Always start loose and gestural before tightening up, even on anatomy days.'},
   {id:2,label:'Wednesday',rest:true,focus:'Rest',duration:'',sessions:[],tip:''},
   {id:3,label:'Thursday',rest:false,focus:'Faces & Portraits',duration:'60–90 min',sessions:[
-    {time:'0–15 min',name:'Feature warm-up',desc:'Quick sketches of eyes, noses, lips, ears — vary the angle each time.'},
-    {time:'15–50 min',name:'Portrait from reference',desc:'Focus on structure — planes of the face, feature placement.'},
+    {time:'0–10 min',name:'Feature warm-up',desc:'Quick sketches of eyes, noses, lips, ears — vary the angle each time.'},
+    {time:'10–50 min',name:'Portrait from reference',desc:'Focus on structure — planes of the face, feature placement.'},
     {time:'50–90 min',name:'Expression studies',desc:'Same face, 3–4 expressions. Study how muscles shift landmarks.'}
   ],tip:'Two-minute life studies of real people build intuition that photos never can.'},
   {id:4,label:'Friday',rest:false,focus:'Colour & Shading',duration:'60–90 min',sessions:[
@@ -1072,10 +1072,10 @@ const defaultSched = [
     {time:'10–45 min',name:'Shading from reference',desc:'Identify light, shadow, core shadow, and reflected light.'},
     {time:'45–90 min',name:'3-colour study',desc:'Limit palette. Paint a still-life or landscape crop. Constraint forces better decisions.'}
   ],tip:'Value does the heavy lifting. Wrong value structure can\'t be saved by nice colour.'},
-  {id:5,label:'Saturday',rest:false,focus:'Personal Style',duration:'90–120 min',sessions:[
-    {time:'0–20 min',name:'Free sketching',desc:'No reference, no goals. 20 minutes of whatever comes to mind.'},
-    {time:'20–70 min',name:'Illustration project',desc:'Your voice — character, scene, or concept. No copying.'},
-    {time:'70–120 min',name:'Artist study',desc:'Pick one artist, analyse their style, then do one study in their manner.'}
+  {id:5,label:'Saturday',rest:false,focus:'Personal Style',duration:'60–90 min',sessions:[
+    {time:'0–15 min',name:'Free sketching',desc:'No reference, no goals. 15 minutes of whatever comes to mind.'},
+    {time:'15–55 min',name:'Illustration project',desc:'Your voice — character, scene, or concept. No copying.'},
+    {time:'55–90 min',name:'Artist study',desc:'Pick one artist, analyse their style, then do one study in their manner.'}
   ],tip:'Style is the residue of everything you\'ve studied. More influences = more distinct voice.'},
   {id:6,label:'Sunday',rest:true,focus:'Rest',duration:'',sessions:[],tip:''}
 ];
@@ -2576,10 +2576,10 @@ async function runAnalysis(){
     content.push({type:'text',text});
   }
 
-  const sys=`You are an expert drawing coach reviewing a student's work. The student is an intermediate artist practising 1–2 hours/day, 4–5 days/week.
+  const sys=`You are an expert drawing coach reviewing a student's work. The student is an intermediate artist practising 1–1.5 hours/day, 4–5 days/week.
 Their focus areas: Fundamentals, Figure & Anatomy, Faces & Portraits, Colour & Shading, Personal Style.
 Analyse everything provided and respond ONLY with this exact JSON format — no markdown, no preamble, no trailing text:
-{"scores":{"Fundamentals":<1-10>,"Figure & Anatomy":<1-10>,"Faces & Portraits":<1-10>,"Colour & Shading":<1-10>,"Personal Style":<1-10>},"feedback":"<2-4 sentences of specific honest constructive feedback>","changes":"<2-3 sentences explaining schedule changes>","tips":[{"icon":"<emoji>","title":"<title>","body":"<2-3 sentence tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"}],"schedule":[{"id":0,"label":"Monday","rest":false,"focus":"<focus>","duration":"<e.g. 60-90 min>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":1,"label":"Tuesday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":2,"label":"Wednesday","rest":true,"focus":"Rest","duration":"","sessions":[],"tip":""},{"id":3,"label":"Thursday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":4,"label":"Friday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":5,"label":"Saturday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":6,"label":"Sunday","rest":true,"focus":"Rest","duration":"","sessions":[],"tip":""}]}
+{"scores":{"Fundamentals":<1-10>,"Figure & Anatomy":<1-10>,"Faces & Portraits":<1-10>,"Colour & Shading":<1-10>,"Personal Style":<1-10>},"feedback":"<2-4 sentences of specific honest constructive feedback>","changes":"<2-3 sentences explaining schedule changes>","tips":[{"icon":"<emoji>","title":"<title>","body":"<2-3 sentence tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"},{"icon":"<emoji>","title":"<title>","body":"<tip>"}],"schedule":[{"id":0,"label":"Monday","rest":false,"focus":"<focus>","duration":"<e.g. 60-90 min>","sessions":[{"time":"<range, must total 60-90 min>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":1,"label":"Tuesday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":2,"label":"Wednesday","rest":true,"focus":"Rest","duration":"","sessions":[],"tip":""},{"id":3,"label":"Thursday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":4,"label":"Friday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":5,"label":"Saturday","rest":false,"focus":"<focus>","duration":"<range>","sessions":[{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"},{"time":"<range>","name":"<name>","desc":"<desc>"}],"tip":"<tip>"},{"id":6,"label":"Sunday","rest":true,"focus":"Rest","duration":"","sessions":[],"tip":""}]}
 RULES: Keep Wednesday (id:2) and Sunday (id:6) as rest days always. Give lowest-scored skills more time. Do not truncate the JSON.`;
 
   try{
